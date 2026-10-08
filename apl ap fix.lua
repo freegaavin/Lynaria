@@ -61676,12 +61676,12 @@ function SaveManager.init()
    },
    ["ndfb"] = false,
    ["nbfb"] = false,
-   ["_id"] = "rbxassetid://16899875441",
+   ["_id"] = "rbxassetid://121952157536892",
    ["mat"] = 2000,
    ["rpue"] = false,
    ["srpn"] = false,
    ["punishable"] = 0,
-   ["name"] = "FrostGrabWindup",
+   ["name"] = "FrostGrab",
    ["hitbox"] = {
     ["Y"] = 0,
     ["X"] = 0,
@@ -91437,6 +91437,8 @@ return LPH_NO_VIRTUALIZE(function()
 
 	-- Original stores.
 	local agilitySpoofer = movementMaid:mark(OriginalStore.new())
+	local safeModeEnabled = false
+	local safeModeCeiling = nil
 
 	-- Original store managers.
 	local noClipMap = movementMaid:mark(OriginalStoreManager.new())
@@ -91772,6 +91774,24 @@ end
 			flyVelocity = flyVelocity + Vector3.new(0, Configuration.expectOptionValue("FlyUpSpeed"), 0)
 		end
 
+		if safeModeEnabled and safeModeCeiling then
+			local position = rootPart.Position
+			if position.Y >= safeModeCeiling then
+				if position.Y > safeModeCeiling then
+					rootPart.CFrame = CFrame.new(position.X, safeModeCeiling, position.Z)
+						* rootPart.CFrame.Rotation
+				end
+
+				local currentVelocity = rootPart.AssemblyLinearVelocity
+				rootPart.AssemblyLinearVelocity = Vector3.new(
+					currentVelocity.X,
+					math.min(currentVelocity.Y, 0),
+					currentVelocity.Z
+				)
+				flyVelocity = Vector3.new(flyVelocity.X, math.min(flyVelocity.Y, 0), flyVelocity.Z)
+			end
+		end
+
 		flyBodyVelocity.Velocity = flyVelocity
 	end
 
@@ -91931,6 +91951,14 @@ end
 		if not humanoid then
 			return
 		end
+
+		local isSafeModeEnabled = Configuration.expectToggleValue("SafeMode")
+		if isSafeModeEnabled and not safeModeEnabled then
+			safeModeCeiling = rootPart.Position.Y + 100
+		elseif not isSafeModeEnabled then
+			safeModeCeiling = nil
+		end
+		safeModeEnabled = isSafeModeEnabled
 
 		if not Configuration.expectToggleValue("TweenToBack") or not updateTweenToBack() then
 			cachedTarget = nil
@@ -96072,6 +96100,12 @@ function GameTab.initLocalCharacterSection(groupbox)
 	})
 
 	flyToggle:AddKeyPicker("FlyKeybind", { Default = "N/A", SyncToggleState = true, Text = "Fly" })
+
+	groupbox:AddToggle("SafeMode", {
+		Text = "Safe Mode",
+		Tooltip = "Limits flying to 100 studs above your height when enabled.",
+		Default = false,
+	})
 
 	local flyDepBox = groupbox:AddDependencyBox()
 
