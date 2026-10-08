@@ -76,23 +76,23 @@ end
 ---@module Utility.Profiler
 local Profiler = require("Utility/Profiler")
 
----@module Lycoris
-local Lycoris = require("Lycoris")
+---@module Lynaria
+local Lynaria = require("Lynaria")
 
 ---Find existing instances and initialize the script.
 local function initializeScript()
 	-- Check if there's already another instance.
-	if shared.Lycoris then
+	if shared.Lynaria then
 		-- Detach previous instance.
-		shared.Lycoris.detach()
+		shared.Lynaria.detach()
 
 		-- Share the previous state.
-		Lycoris.queued = shared.Lycoris.queued
+		Lynaria.queued = shared.Lynaria.queued
 	end
 
 	-- Re-initialize under the new state.
-	shared.Lycoris = Lycoris
-	shared.Lycoris.init()
+	shared.Lynaria = Lynaria
+	shared.Lynaria.init()
 end
 
 ---This is called when the initalization errors.
@@ -106,7 +106,7 @@ local function onInitializeError(error)
 	warn(debug.traceback())
 
 	-- Detach the current instance.
-	Lycoris.detach()
+	Lynaria.detach()
 end
 
 -- Safely profile and initialize the script aswell as handle errors.
@@ -115,9 +115,9 @@ Profiler.run("Main_InitializeScript", function(...)
 end)
 
 end)
-__bundle_register("Lycoris", function(require, _LOADED, __bundle_register, __bundle_modules)
--- Detach and initialize a Lycoris instance.
-local Lycoris = { queued = false, silent = false, dpscanning = false, norpc = false, verbose = false }
+__bundle_register("Lynaria", function(require, _LOADED, __bundle_register, __bundle_modules)
+-- Detach and initialize a Lynaria instance.
+local Lynaria = { queued = false, silent = false, dpscanning = false, norpc = false, verbose = false }
 
 ---@module Utility.Logger
 local Logger = require("Utility/Logger")
@@ -179,8 +179,8 @@ local Wipe = require("Game/Wipe")
 ---@module Features.Automation.EchoFarm
 local EchoFarm = require("Features/Automation/EchoFarm")
 
--- Lycoris maid.
-local lycorisMaid = Maid.new()
+-- Lynaria maid.
+local lynariaMaid = Maid.new()
 
 -- Constants.
 local LOBBY_PLACE_ID = 4111023553
@@ -195,7 +195,7 @@ local playersService = game:GetService("Players")
 local startTimestamp = os.clock()
 
 ---Initialize instance.
-function Lycoris.init()
+function Lynaria.init()
 	local localPlayer = nil
 
 	repeat
@@ -212,19 +212,19 @@ function Lycoris.init()
 	until localPlayer ~= nil
 
 	if isfile and isfile("smarker.txt") then
-		Lycoris.silent = true
+		Lynaria.silent = true
 	end
 
 	if isfile and isfile("dpscanning.txt") then
-		Lycoris.dpscanning = true
+		Lynaria.dpscanning = true
 	end
 
 	if isfile and isfile("norpc.txt") then
-		Lycoris.norpc = true
+		Lynaria.norpc = true
 	end
 
 	if isfile and isfile("verbose.txt") then
-		Lycoris.verbose = true
+		Lynaria.verbose = true
 	end
 
 	if game.PlaceId == CHIME_LOBBY_PLACE_ID then
@@ -294,23 +294,6 @@ function Lycoris.init()
 
 	StateListener.init()
 
-	-- Resume Auto Ferryman after a server hop (afdata survives the teleport via MemStorage). Wait
-	-- until we're actually in the Eastern Luminant (ValleyExit may still be streaming in) before
-	-- restarting the farm.
-	if PersistentData.get("afdata") then
-		task.spawn(function()
-			local AutoFerryman = require("Features/Automation/AutoFerryman")
-			local deadline = os.clock() + 60
-			repeat
-				task.wait(1)
-			until AutoFerryman.inEasternLuminant() or AutoFerryman.inBossDungeon() or os.clock() >= deadline
-
-			if AutoFerryman.inEasternLuminant() or AutoFerryman.inBossDungeon() then
-				AutoFerryman.start()
-			end
-		end)
-	end
-
 	Logger.notify("Script has been initialized in %ims.", (os.clock() - startTimestamp) * 1000)
 
 	if not PersistentData.get("fli") then
@@ -325,12 +308,12 @@ function Lycoris.init()
 		return
 	end
 
-	if Lycoris.norpc then
+	if Lynaria.norpc then
 		return
 	end
 
 	bloxstrapRPCModule.SetRichPresence({
-		details = "Lycoris Rewrite (Attached)",
+		details = "Lynaria Rewrite (Attached)",
 		state = string.format(
 			"Currently attached to the script - time elapsed is a session of %s time spent.",
 			Environment.isTester() and "developing" or "using"
@@ -346,9 +329,9 @@ function Lycoris.init()
 		},
 	})
 
-	local playerRemovingSignal = lycorisMaid:mark(Signal.new(playersService.PlayerRemoving))
+	local playerRemovingSignal = lynariaMaid:mark(Signal.new(playersService.PlayerRemoving))
 
-	playerRemovingSignal:connect("Lycoris_OnLocalPlayerRemoved", function(player)
+	playerRemovingSignal:connect("Lynaria_OnLocalPlayerRemoved", function(player)
 		if player ~= playersService.LocalPlayer then
 			return
 		end
@@ -370,8 +353,8 @@ function Lycoris.init()
 end
 
 ---Detach instance.
-function Lycoris.detach()
-	lycorisMaid:clean()
+function Lynaria.detach()
+	lynariaMaid:clean()
 
 	ModuleManager.detach()
 
@@ -397,7 +380,7 @@ function Lycoris.detach()
 
 	if bloxstrapRPCModule then
 		bloxstrapRPCModule.SetRichPresence({
-			details = "Lycoris Rewrite (Detached)",
+			details = "Lynaria Rewrite (Detached)",
 			state = Environment.isTester() and "Detached from script - something broke, fixing a bug, or a hot-reload."
 				or "Detached from script - something broke or a hot-reload.",
 			timeStart = PersistentData.get("fli") or os.time(),
@@ -417,2134 +400,8 @@ function Lycoris.detach()
 	Logger.warn("Script has been detached.")
 end
 
--- Return Lycoris module.
-return Lycoris
-
-end)
-__bundle_register("Features/Automation/AutoFerryman", function(require, _LOADED, __bundle_register, __bundle_modules)
---I MADE THIS IN ONE CLAUDE PROMPT
-local AutoFerryman = { running = false }
-
----@module GUI.Library
-local Library = require("GUI/Library")
-
----@module Utility.CoreGuiManager
-local CoreGuiManager = require("Utility/CoreGuiManager")
-
----@module Utility.Logger
-local Logger = require("Utility/Logger")
-
----@module Utility.Finder
-local Finder = require("Utility/Finder")
-
----@module Utility.Prompt
-local Prompt = require("Utility/Prompt")
-
----@module Features.Game.Tweening
-local Tweening = require("Features/Game/Tweening")
-
----@module Game.ServerHop
-local ServerHop = require("Game/ServerHop")
-
----@module Utility.PersistentData
-local PersistentData = require("Utility/PersistentData")
-
----@module Game.InputClient
-local InputClient = require("Game/InputClient")
-
----@module Utility.Configuration
-local Configuration = require("Utility/Configuration")
-
----@module Features.Automation.AutoLoot
-local AutoLoot = require("Features/Automation/AutoLoot")
-
----@module Features.Automation.Objects.AutoLootOptions
-local AutoLootOptions = require("Features/Automation/Objects/AutoLootOptions")
-
----@module Game.PlayerScanning
-local PlayerScanning = require("Game/PlayerScanning")
-
-local players = game:GetService("Players")
-local runService = game:GetService("RunService")
-local replicatedStorage = game:GetService("ReplicatedStorage")
-local collectionService = game:GetService("CollectionService")
-
-local localPlayer = players.LocalPlayer
-
-local LOOTED_TAG = "LumaFerrymanLooted"
-
-local TEXT = {
-	overlayTitle = "Auto Ferryman",
-	actionPrefix = "Current Action: ",
-	actionPrefixEmpty = "Current Action:",
-	elapsed = "Elapsed: %d:%02d",
-	elapsedZero = "Elapsed: 0:00",
-	timeout = "Timeout: %d:%02d",
-	timeoutNone = "Timeout: --",
-	cycles = "Cycles: %d",
-	stopButton = "Stop",
-
-	started = "Auto Ferryman started.",
-	stopped = "Auto Ferryman stopped.",
-	notInPlace = "Auto Ferryman: Not in Eastern Luminant or the Ferryman dungeon",
-	needTools = "Auto Ferryman: Need a pickaxe and lumber axe to start (for chopping trees and mining coal)",
-	craftRemoteMissing = "Auto Ferryman: Craft remote not found.",
-	noLumberAxeNotify = "Auto Ferryman: No lumber axe, leaving.",
-	noPickaxeNotify = "Auto Ferryman: No pickaxe, leaving.",
-	noWeaponNotify = "Auto Ferryman: No wapon in backpack.",
-	bossTimedOutNotify = "Auto Ferryman: Boss fight timed out.",
-	wrongSlotNotify = "Auto Ferryman: on a different slot than started, stopping.",
-	noTreesNotify = "Auto Ferryman: No trees found",
-	noMeshNotify = "Auto Ferryman: No %s found in %s.",
-	hopNotify = "Auto Ferryman: %s: Server hopping",
-
-	kickNoLumberAxe = "No lumber axe to chop trees",
-	kickNoPickaxe = "No pickaxe to mine coal",
-	kickDepths = "ended up in depths. sorry.",
-
-	reasonTimeout = "timeout",
-	reasonModerator = "moderator in server",
-	reasonPlayerNearby = "player nearby",
-	reasonNoTrees = "no trees",
-	reasonCraftFailed = "crafting failed",
-	reasonNoMesh = "no %s",
-	reasonFlintCraftFailed = "flint crafting failed",
-	reasonCycleComplete = "cycle complete",
-	reasonLoadingTimeout = "loading timeout",
-
-	tweening = "Tweening to %s. Current Distance: %d",
-	destIsland = "Ferryman Island",
-	destMiners = "Miners Landing",
-	waitingForTree = "waiting for trees to load",
-	choppingTree = "chopping tree. chop chop",
-	placingCampfire = "i place campfires now %d/%d",
-	checkingCampfires = "checking campfires",
-	craftingCampfires = "crafting %d campfires",
-	campfireCraftFailed = "campfire crafting failed",
-	waitingForMesh = "waiting for %s",
-	miningMesh = "mining %s",
-	craftingUmbralFlint = "crafting umbral flint",
-	craftingFlint = "crafting flint",
-	flintCraftFailed = "flint crafting failed",
-	campfiresReady = "campfires ready",
-	breakingCampfire = "breaking bad boy campfire",
-	campfiresPlaced = "i hope the campfire placements worked",
-	lootingChests = "yoinking the loot",
-	waitingForChests = "waiting for chests",
-	lootingChest = "yoinking the loot",
-	ferrymanNotFound = "ferryman not found",
-	tweeningToFerryman = "hi ferryman",
-	talkingToFerryman = "talking to Ferryman",
-	advancingDialogue = "blah blah blah",
-	dialogueComplete = "dialogue complete",
-	waitingForBoss = "waiting for boss",
-	noWeapon = "no weapon",
-	bossFightTimedOut = "boss fight timed out",
-	wrongSlot = "Auto Ferryman: Wrong slot",
-	fightingFerryman = "die ferryman die die",
-	bossDefeated = "ferryman died yay",
-	chestsLooted = "chests looted",
-}
-
-local hopping = false
-
-local ETREAN_REALM_ALIASES = { "EtreanLuminant", "Etrean Luminant" }
-
----@return boolean
-function AutoFerryman.inEasternLuminant()
-	local valleyExit = workspace:FindFirstChild("ValleyExit")
-	local teleporter = valleyExit
-		and (valleyExit:FindFirstChild("RealmTeleport") or valleyExit:FindFirstChild("RealmTeleporter"))
-	if not teleporter then
-		return false
-	end
-
-	local realm = teleporter:GetAttribute("Realm")
-	for _, alias in next, ETREAN_REALM_ALIASES do
-		if realm == alias then
-			return true
-		end
-	end
-
-	return false
-end
-
-
-local BOSS_PLACE_ID = 8668476218
-local DEPTHS_PLACE_ID = 5735553160
-
-local NPCS_FOLDER = "NPCs"
-local FERRYMAN_NPC_NAME = "The Ferryman"
-
-local LIVE_FOLDER = "Live"
-local BOSS_MODEL_NAME = ".ferryman1"
-local WEAPON_NAME = "Weapon"
-
-local BOSS_UNDER_OFFSET = 10
-
---fuck lightning assault
-local BOSS_HOLD_ANIM_ID = "5968288116"
-
-local BOSS_FIGHT_TIMEOUT = 15 * 60
-
-local THROWN_FOLDER = "Thrown"
-local CHEST_MODEL_NAME = "Model"
-local CHEST_COUNT = 3
-local ALWAYS_LOOT = "Umbral Obsidian"
-
----@return boolean
-function AutoFerryman.inBossDungeon()
-	if game.PlaceId ~= BOSS_PLACE_ID then
-		return false
-	end
-	local npcs = workspace:FindFirstChild(NPCS_FOLDER)
-	return npcs ~= nil and npcs:FindFirstChild(FERRYMAN_NPC_NAME) ~= nil
-end
-
--- i got these coordinates from dex explorer
-local PLACE_LOCATIONS = {
-	CFrame.new(-4099.17773, 65.9573746, 9445.28179, 0.981207728, -0.000153392553, -0.192954302, 0.000146208593, 1, -5.14709718e-05, 0.192954302, 2.22921371e-05, 0.981207728),
-	CFrame.new(-4072.07329, 65.7076187, 9428.95825, 0.225762814, -0.000561982335, 0.974182129, 0.000387706299, 0.999999821, 0.000487026584, -0.974182248, 0.000267744064, 0.225762993),
-	CFrame.new(-4091.05849, 65.870491, 9404.10488, -0.948379517, -0.000251352758, 0.317137599, -0.000239436369, 0.99999994, 7.65478471e-05, -0.317137599, -3.33786375e-06, -0.948379517),
-	CFrame.new(-4119.05869, 65.8594055, 9420.94440, -0.279934168, -0.00051805377, -0.960019052, -8.90582305e-05, 0.999999881, -0.000513659848, 0.960019171, -5.8293339e-05, -0.279934168),
-}
-
-local HIGHLIGHT_FILL = Color3.fromRGB(0, 120, 255)
-local HIGHLIGHT_OUTLINE = Color3.fromRGB(120, 190, 255)
-
-local FERRYMAN_TARGET = Vector3.new(-4094.81348, 68.8016357, 9425.08691)
-local FERRYMAN_TWEEN_Y = 20000
-local FERRYMAN_DESCENT_Y = 100
-
-local MINER_TARGET = Vector3.new(-3522.258056640625, 114.53073120117188, 2919.383544921875)
-local INGREDIENTS_FOLDER = "Ingredients"
-local INTERACT_PROMPT_NAME = "InteractPrompt"
-
-local FERRYMAN_DIALOGUE_CHOICES = { "Who are you?", "[Tell him your name]", "A wager?", "Deal." }
-
-local MINER_RANGE = 1000
-local TWEEN_SPEED = 100
-local TWEEN_IDENTIFIER = "AutoFerryman"
-local AUTO_LOG_WATCH_INTERVAL = 1
-
-local AUTO_LOG_RANGE = 1000
-
-local ISLAND_NEAR_RANGE = 500
-
-local DEFAULT_TIMEOUT = 60
-local TWEEN_TIMEOUT = 300
-
-local REQUIRED_CAMPFIRES = 4
-local WOOD_PER_CAMPFIRE = 1
-local STICKS_PER_CAMPFIRE = 3
-
-local CHOP_TWEEN_IDENTIFIER = "AutoFerrymanChop"
-local CHOP_SWING_INTERVAL = 0.1
-
-local TREE_ISLAND_RANGE = 1000
-
-local CAMPFIRE_BREAK_RANGE = 100
-
-local screenGui, actionLabel, timerLabel, timeoutLabel, cyclesLabel = nil, nil, nil, nil, nil
-local highlight = nil
-local startClock = 0
-local cycles = 0
-local baseElapsed = 0
-local startSlot = nil
-local timerConnection = nil
-local characterAddedConnection = nil
-local weaponConnection = nil
-local previousTweenSpeed = nil
-local previousNoFallDamage = nil
-local previousFly = nil
-local removedWindowFilter = false
-local noclipConnection = nil
-
-local WINDOW_FILTER = "Disable When Window Not Active"
-local timeoutDeadline = nil
-local flying = false
-local lastDescentClock = nil
-local DESCENT_LOG_GRACE = 1
-
----@return Instance?
-local function guiParent()
-	local ok, hui = pcall(function()
-		return gethui and gethui()
-	end)
-	if ok and hui then
-		return hui
-	end
-
-	local ok2, coreGui = pcall(function()
-		return game:GetService("CoreGui")
-	end)
-	if ok2 and coreGui then
-		return coreGui
-	end
-
-	return localPlayer and localPlayer:FindFirstChildOfClass("PlayerGui")
-end
-
----@param class string
----@param props table
----@param parent Instance?
----@return Instance
-local function mk(class, props, parent)
-	local instance = Instance.new(class)
-	for key, value in pairs(props) do
-		instance[key] = value
-	end
-	if parent then
-		instance.Parent = parent
-	end
-	return instance
-end
-
----@param seconds number
----@return string
-local function formatElapsed(seconds)
-	local minutes = math.floor(seconds / 60)
-	local secs = math.floor(seconds % 60)
-	return string.format(TEXT.elapsed, minutes, secs)
-end
-
----@return number
-local function currentElapsed()
-	return baseElapsed + (os.clock() - startClock)
-end
-
----@return any
-local function currentSlot()
-	return localPlayer and localPlayer:GetAttribute("DataSlot")
-end
-
-local function saveState()
-	PersistentData.set("afdata", { active = true, cycles = cycles, elapsed = currentElapsed(), slot = startSlot })
-end
-
-local function buildOverlay()
-	if screenGui then
-		return
-	end
-
-	screenGui = CoreGuiManager.imark(Instance.new("ScreenGui"))
-	screenGui.Name = "LumaAutoFerrymanOverlay"
-	screenGui.ResetOnSpawn = false
-	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-	screenGui.DisplayOrder = 9999
-
-	local protectGui = protectgui or (syn and syn.protect_gui) or function() end
-	pcall(protectGui, screenGui)
-	screenGui.Parent = guiParent()
-
-	local outer = mk("Frame", {
-		Name = "Outer",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 46),
-		Size = UDim2.new(0, 300, 0, 170),
-		BackgroundColor3 = Library.MainColor,
-		BorderColor3 = Library.OutlineColor,
-		BorderSizePixel = 1,
-		ZIndex = 200,
-	}, screenGui)
-	Library:AddToRegistry(outer, { BackgroundColor3 = "MainColor", BorderColor3 = "OutlineColor" })
-
-	local title = mk("TextLabel", {
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 8, 0, 6),
-		Size = UDim2.new(1, -16, 0, 20),
-		FontFace = Library.Font,
-		TextSize = 16,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Library.AccentColor,
-		Text = TEXT.overlayTitle,
-		ZIndex = 201,
-	}, outer)
-	Library:AddToRegistry(title, { TextColor3 = "AccentColor" })
-
-	actionLabel = mk("TextLabel", {
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 8, 0, 30),
-		Size = UDim2.new(1, -16, 0, 34),
-		FontFace = Library.Font,
-		TextSize = 14,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextYAlignment = Enum.TextYAlignment.Top,
-		TextColor3 = Library.FontColor or Color3.new(1, 1, 1),
-		TextWrapped = true,
-		Text = "Current Action:",
-		ZIndex = 201,
-	}, outer)
-	Library:AddToRegistry(actionLabel, { TextColor3 = "FontColor" })
-
-	timerLabel = mk("TextLabel", {
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 8, 0, 68),
-		Size = UDim2.new(1, -16, 0, 20),
-		FontFace = Library.Font,
-		TextSize = 14,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Library.FontColor or Color3.new(1, 1, 1),
-		Text = TEXT.elapsedZero,
-		ZIndex = 201,
-	}, outer)
-	Library:AddToRegistry(timerLabel, { TextColor3 = "FontColor" })
-
-	timeoutLabel = mk("TextLabel", {
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 8, 0, 90),
-		Size = UDim2.new(1, -16, 0, 20),
-		FontFace = Library.Font,
-		TextSize = 14,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Library.FontColor or Color3.new(1, 1, 1),
-		Text = TEXT.timeoutNone,
-		ZIndex = 201,
-	}, outer)
-	Library:AddToRegistry(timeoutLabel, { TextColor3 = "FontColor" })
-
-	cyclesLabel = mk("TextLabel", {
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 8, 0, 112),
-		Size = UDim2.new(1, -16, 0, 20),
-		FontFace = Library.Font,
-		TextSize = 14,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Library.FontColor or Color3.new(1, 1, 1),
-		Text = string.format(TEXT.cycles, 0),
-		ZIndex = 201,
-	}, outer)
-	Library:AddToRegistry(cyclesLabel, { TextColor3 = "FontColor" })
-
-	local stopButton = mk("TextButton", {
-		Position = UDim2.new(0, 8, 1, -30),
-		Size = UDim2.new(1, -16, 0, 22),
-		AutoButtonColor = true,
-		BackgroundColor3 = Library:GetDarkerColor(Library.MainColor),
-		BorderColor3 = Library.OutlineColor,
-		BorderSizePixel = 1,
-		FontFace = Library.Font,
-		TextSize = 15,
-		TextColor3 = Library.FontColor or Color3.new(1, 1, 1),
-		Text = TEXT.stopButton,
-		ZIndex = 201,
-	}, outer)
-	Library:AddToRegistry(stopButton, {
-		BackgroundColor3 = function()
-			return Library:GetDarkerColor(Library.MainColor)
-		end,
-		BorderColor3 = "OutlineColor",
-		TextColor3 = "FontColor",
-	})
-
-	stopButton.MouseButton1Click:Connect(function()
-		AutoFerryman.stop()
-	end)
-
-	pcall(function()
-		Library:MakeDraggable(outer)
-	end)
-
-	screenGui.Enabled = false
-end
-
-local function applyHighlight()
-	local character = localPlayer and localPlayer.Character
-	if not character then
-		return
-	end
-
-	if highlight and highlight.Parent then
-		highlight.Adornee = character
-		highlight.Parent = character
-		return
-	end
-
-	highlight = CoreGuiManager.imark(Instance.new("Highlight"))
-	highlight.Name = "LumaAutoFerrymanHighlight"
-	highlight.FillColor = HIGHLIGHT_FILL
-	highlight.OutlineColor = HIGHLIGHT_OUTLINE
-	highlight.FillTransparency = 0.5
-	highlight.OutlineTransparency = 0
-	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	highlight.Adornee = character
-	highlight.Parent = character
-end
-
-local function removeHighlight()
-	if highlight then
-		pcall(function()
-			highlight:Destroy()
-		end)
-		highlight = nil
-	end
-end
-
-local function applyTweenSpeed()
-	if not Options or not Options.TweenStudsPerSecond then
-		return
-	end
-	previousTweenSpeed = Options.TweenStudsPerSecond.Value
-	Options.TweenStudsPerSecond:SetValue(TWEEN_SPEED)
-end
-
-local function restoreTweenSpeed()
-	if previousTweenSpeed ~= nil and Options and Options.TweenStudsPerSecond then
-		Options.TweenStudsPerSecond:SetValue(previousTweenSpeed)
-	end
-	previousTweenSpeed = nil
-end
-
-local function applyNoFallDamage()
-	if not Toggles or not Toggles.NoFallDamage then
-		return
-	end
-	previousNoFallDamage = Toggles.NoFallDamage.Value
-	Toggles.NoFallDamage:SetValue(true)
-end
-
-local function restoreNoFallDamage()
-	if previousNoFallDamage ~= nil and Toggles and Toggles.NoFallDamage then
-		Toggles.NoFallDamage:SetValue(previousNoFallDamage)
-	end
-	previousNoFallDamage = nil
-end
-
-local function applyFly()
-	if not Toggles or not Toggles.Fly then
-		return
-	end
-	previousFly = Toggles.Fly.Value
-	Toggles.Fly:SetValue(true)
-end
-
-local function restoreFly()
-	if previousFly ~= nil and Toggles and Toggles.Fly then
-		Toggles.Fly:SetValue(previousFly)
-	end
-	previousFly = nil
-end
-
-local function applyDefenseFilter()
-	local option = Options and Options.AutoDefenseFilters
-	if not option then
-		return
-	end
-
-	local current = option.Value or {}
-	removedWindowFilter = current[WINDOW_FILTER] == true
-	if not removedWindowFilter then
-		return
-	end
-
-	local newValue = {}
-	for key, value in pairs(current) do
-		newValue[key] = value
-	end
-	newValue[WINDOW_FILTER] = nil
-	option:SetValue(newValue)
-end
-
-local function restoreDefenseFilter()
-	local option = Options and Options.AutoDefenseFilters
-	if option and removedWindowFilter then
-		local newValue = {}
-		for key, value in pairs(option.Value or {}) do
-			newValue[key] = value
-		end
-		newValue[WINDOW_FILTER] = true
-		option:SetValue(newValue)
-	end
-	removedWindowFilter = false
-end
-
-local function applyNoClip()
-	if noclipConnection then
-		return
-	end
-
-	noclipConnection = runService.Stepped:Connect(function()
-		if not AutoFerryman.running then
-			return
-		end
-
-		local character = localPlayer and localPlayer.Character
-		if not character then
-			return
-		end
-
-		for _, part in next, character:GetDescendants() do
-			if part:IsA("BasePart") then
-				pcall(function()
-					if part.CanCollide then
-						part.CanCollide = false
-					end
-					--this is fucking useless
-					part.AssemblyLinearVelocity = Vector3.zero
-					part.AssemblyAngularVelocity = Vector3.zero
-				end)
-			end
-		end
-
-		local controllerManager = character:FindFirstChild("ControllerManager")
-		local airController = controllerManager and controllerManager:FindFirstChild("AirController")
-		if controllerManager and airController then
-			pcall(function()
-				controllerManager.ActiveController = airController
-			end)
-		end
-	end)
-end
-
-local function restoreNoClip()
-	if noclipConnection then
-		pcall(function()
-			noclipConnection:Disconnect()
-		end)
-		noclipConnection = nil
-	end
-end
-
----@param text string?
-local function setActionText(text)
-	if not actionLabel then
-		return
-	end
-
-	if text and text ~= "" then
-		actionLabel.Text = TEXT.actionPrefix .. text
-	else
-		actionLabel.Text = TEXT.actionPrefixEmpty
-	end
-end
-
----@param seconds number?
-local function armTimeout(seconds)
-	timeoutDeadline = seconds and (os.clock() + seconds) or nil
-end
-
----@param goalPosition Vector3
----@param destName string?
-local function tweenTo(goalPosition, destName)
-	destName = destName or TEXT.destIsland
-	Tweening.goal(TWEEN_IDENTIFIER, CFrame.new(goalPosition), false)
-
-	armTimeout(TWEEN_TIMEOUT)
-
-	while AutoFerryman.running do
-		local character = localPlayer and localPlayer.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if root then
-			local dx = goalPosition.X - root.Position.X
-			local dz = goalPosition.Z - root.Position.Z
-			local distance = math.sqrt(dx * dx + dz * dz)
-			setActionText(string.format(TEXT.tweening, destName, distance))
-			if distance <= 1.0 then
-				break
-			end
-		end
-		runService.Heartbeat:Wait()
-	end
-end
-
-local function watchForNearbyPlayers()
-	while AutoFerryman.running do
-		task.wait(AUTO_LOG_WATCH_INTERVAL)
-
-		if not AutoFerryman.running or hopping then
-			break
-		end
-
-		if game.PlaceId == DEPTHS_PLACE_ID then
-			AutoFerryman.stop()
-			pcall(function()
-				localPlayer:Kick(TEXT.kickDepths)
-			end)
-			return
-		end
-
-		local slot = currentSlot()
-		if startSlot ~= nil and slot ~= nil and slot ~= startSlot then
-			AutoFerryman.setAction(TEXT.wrongSlot)
-			Logger.notify(TEXT.wrongSlotNotify)
-			AutoFerryman.stop()
-			return
-		end
-
-		if timeoutDeadline and os.clock() >= timeoutDeadline then
-			AutoFerryman.hop(TEXT.reasonTimeout)
-			return
-		end
-
-		local hasMods = false
-		pcall(function()
-			hasMods = PlayerScanning.hasModerators()
-		end)
-		if hasMods then
-			AutoFerryman.hop(TEXT.reasonModerator)
-			return
-		end
-
-		if lastDescentClock and (os.clock() - lastDescentClock) < DESCENT_LOG_GRACE then
-			continue
-		end
-
-		local character = localPlayer and localPlayer.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if not root then
-			continue
-		end
-
-		if Finder.pnear(root.Position, AUTO_LOG_RANGE) then
-			AutoFerryman.hop(TEXT.reasonPlayerNearby)
-			return
-		end
-	end
-end
-
----@param toolName string
----@return number
-local function getToolQuantity(toolName)
-	local total = 0
-
-	local containers = {
-		localPlayer and localPlayer:FindFirstChild("Backpack"),
-		localPlayer and localPlayer.Character,
-	}
-
-	for _, container in next, containers do
-		if container then
-			for _, tool in next, container:GetChildren() do
-				if tool:IsA("Tool") and tool.Name == toolName then
-					local quantity = tool:FindFirstChild("Quantity")
-					if quantity and quantity:IsA("IntValue") then
-						total = total + quantity.Value
-					end
-				end
-			end
-		end
-	end
-
-	return total
-end
-
----@param name string
----@return number
-local function getItemCount(name)
-	local total = 0
-
-	local containers = {
-		localPlayer and localPlayer:FindFirstChild("Backpack"),
-		localPlayer and localPlayer.Character,
-	}
-
-	for _, container in next, containers do
-		if container then
-			for _, tool in next, container:GetChildren() do
-				if tool:IsA("Tool") and tool.Name == name then
-					local quantity = tool:FindFirstChild("Quantity")
-					if quantity and quantity:IsA("IntValue") then
-						total = total + quantity.Value
-					else
-						total = total + 1
-					end
-				end
-			end
-		end
-	end
-
-	return total
-end
-
----@return number
-local function flintUses()
-	local total = 0
-
-	local containers = {
-		localPlayer and localPlayer:FindFirstChild("Backpack"),
-		localPlayer and localPlayer.Character,
-	}
-
-	for _, container in next, containers do
-		if container then
-			for _, tool in next, container:GetChildren() do
-				if tool:IsA("Tool") and (tool.Name == "Flint" or tool.Name == "Umbral Flint") then
-					local uses = tool:FindFirstChild("Uses")
-					if uses and uses:IsA("IntValue") then
-						total = total + uses.Value
-					end
-				end
-			end
-		end
-	end
-
-	return total
-end
-
----@param className string
----@param timeout number?
----@return Instance?
-local function findChoiceRemote(className, timeout)
-	local deadline = os.clock() + (timeout or 5)
-
-	local function scan()
-		if getnilinstances then
-			local ok, instances = pcall(getnilinstances)
-			if ok and type(instances) == "table" then
-				for _, object in next, instances do
-					local matches = false
-					pcall(function()
-						matches = object.Name == "Choice" and object:IsA(className)
-					end)
-					if matches then
-						return object
-					end
-				end
-			end
-		end
-
-		local ok, found = pcall(function()
-			for _, object in next, game:GetDescendants() do
-				if object.Name == "Choice" and object:IsA(className) then
-					return object
-				end
-			end
-		end)
-		if ok and found then
-			return found
-		end
-
-		return nil
-	end
-
-	repeat
-		local found = scan()
-		if found then
-			return found
-		end
-		task.wait()
-	until os.clock() >= deadline
-
-	return nil
-end
-
----@param materials table
----@param recipeName string
----@param count number
----@return boolean
-local function craftBatch(materials, recipeName, count)
-	if count <= 0 then
-		return true
-	end
-
-	local requests = replicatedStorage:FindFirstChild("Requests")
-	local craftRemote = requests and requests:FindFirstChild("Craft")
-	if not craftRemote then
-		Logger.warn(TEXT.craftRemoteMissing)
-		return false
-	end
-
-	task.spawn(function()
-		pcall(function()
-			craftRemote:InvokeServer(materials, recipeName)
-		end)
-	end)
-
-	local quantityChoice = findChoiceRemote("RemoteFunction", 5)
-	if quantityChoice then
-		task.spawn(function()
-			pcall(function()
-				quantityChoice:InvokeServer(count)
-			end)
-		end)
-	end
-
-	return true
-end
-
----@param amount number
----@return boolean crafted
-local function craftCampfires(amount)
-	return craftBatch({ Wood = true }, "Campfire Pit", amount)
-end
-
----@return number
-local function craftableCampfires()
-	return math.floor(getToolQuantity("Wood") / WOOD_PER_CAMPFIRE)
-end
-
----@return Model?
-local function findTree()
-	local destructibles = workspace:FindFirstChild("Destructibles")
-	if not destructibles then
-		return nil
-	end
-
-	local character = localPlayer and localPlayer.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local origin = (root and root.Position) or FERRYMAN_TARGET
-
-	local best, bestDistance = nil, math.huge
-
-	for _, model in next, destructibles:GetChildren() do
-		if model:IsA("Model") and model.Parent and model.Name:find("Tree") then
-			local ok, pivot = pcall(function()
-				return model:GetPivot().Position
-			end)
-			if ok then
-				if (pivot - FERRYMAN_TARGET).Magnitude <= TREE_ISLAND_RANGE then
-					local distance = (pivot - origin).Magnitude
-					if distance < bestDistance then
-						best = model
-						bestDistance = distance
-					end
-				end
-			end
-		end
-	end
-
-	return best
-end
-
----@return Tool?
-local function equipLumberAxe()
-	local character = localPlayer and localPlayer.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not character or not humanoid then
-		return nil
-	end
-
-	local equipped = character:FindFirstChild("Lumber Axe")
-	if equipped and equipped:IsA("Tool") then
-		return equipped
-	end
-
-	local backpack = localPlayer:FindFirstChild("Backpack")
-	local tool = backpack and backpack:FindFirstChild("Lumber Axe")
-	if not (tool and tool:IsA("Tool")) then
-		Logger.notify(TEXT.noLumberAxeNotify)
-		AutoFerryman.stop()
-		pcall(function()
-			localPlayer:Kick(TEXT.kickNoLumberAxe)
-		end)
-		return nil
-	end
-
-	pcall(function()
-		humanoid:EquipTool(tool)
-	end)
-
-	return character:FindFirstChild("Lumber Axe")
-end
-
----@return Instance?
-local function findNearbyCampfire()
-	local destructibles = workspace:FindFirstChild("Destructibles")
-	if not destructibles then
-		return nil
-	end
-
-	local reference = Vector3.new(FERRYMAN_TARGET.X, FERRYMAN_DESCENT_Y, FERRYMAN_TARGET.Z)
-	local best, bestDistance = nil, math.huge
-
-	for _, object in next, destructibles:GetChildren() do
-		if (object:IsA("Model") or object:IsA("BasePart")) and object.Parent and object.Name:find("Campfire") then
-			local ok, pivot = pcall(function()
-				return object:GetPivot().Position
-			end)
-			if ok then
-				local distance = (pivot - reference).Magnitude
-				if distance <= CAMPFIRE_BREAK_RANGE and distance < bestDistance then
-					best = object
-					bestDistance = distance
-				end
-			end
-		end
-	end
-
-	return best
-end
-
----@param model Instance
----@return boolean destroyed
-local function chopModel(model)
-	if not equipLumberAxe() then
-		return false
-	end
-
-	local position = model:GetPivot().Position
-
-	while AutoFerryman.running and model.Parent do
-		Tweening.goal(CHOP_TWEEN_IDENTIFIER, CFrame.new(position), false)
-
-		local axe = equipLumberAxe()
-		if not axe then
-			Tweening.stop(CHOP_TWEEN_IDENTIFIER)
-			return false
-		end
-
-		pcall(function()
-			axe:Activate()
-		end)
-
-		task.wait(CHOP_SWING_INTERVAL)
-	end
-
-	Tweening.stop(CHOP_TWEEN_IDENTIFIER)
-
-	return model.Parent == nil
-end
-
----@return boolean destroyed
-local function chopTree()
-	local tree = findTree()
-	local deadline = os.clock() + 60
-	while not tree and AutoFerryman.running do
-		if os.clock() >= deadline then
-			AutoFerryman.hop(TEXT.reasonNoTrees)
-			return false
-		end
-		AutoFerryman.setAction(TEXT.waitingForTree)
-		task.wait(1)
-		tree = findTree()
-	end
-
-	if not AutoFerryman.running or not tree then
-		return false
-	end
-
-	AutoFerryman.setAction(TEXT.choppingTree)
-	return chopModel(tree)
-end
-
----@return Tool?
-local function equipCampfirePit()
-	local character = localPlayer and localPlayer.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not character or not humanoid then
-		return nil
-	end
-
-	local equipped = character:FindFirstChild("Campfire Pit")
-	if equipped and equipped:IsA("Tool") then
-		return equipped
-	end
-
-	local backpack = localPlayer:FindFirstChild("Backpack")
-	local tool = backpack and backpack:FindFirstChild("Campfire Pit")
-	if not (tool and tool:IsA("Tool")) then
-		return nil
-	end
-
-	pcall(function()
-		humanoid:EquipTool(tool)
-	end)
-
-	return character:FindFirstChild("Campfire Pit")
-end
-
----@return Tool?
-local function equipFlint()
-	local character = localPlayer and localPlayer.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not character or not humanoid then
-		return nil
-	end
-
-	local backpack = localPlayer:FindFirstChild("Backpack")
-
-	local function find(name)
-		return character:FindFirstChild(name) or (backpack and backpack:FindFirstChild(name))
-	end
-
-	local tool = find("Umbral Flint") or find("Flint")
-	if not (tool and tool:IsA("Tool")) then
-		return nil
-	end
-
-	local name = tool.Name
-	pcall(function()
-		humanoid:EquipTool(tool)
-	end)
-
-	return character:FindFirstChild(name)
-end
-
----@param cframe CFrame
-local function moveTo(cframe)
-	Tweening.goal(TWEEN_IDENTIFIER, cframe, false)
-
-	while AutoFerryman.running do
-		local character = localPlayer and localPlayer.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if root then
-			local dx = cframe.Position.X - root.Position.X
-			local dz = cframe.Position.Z - root.Position.Z
-			if math.sqrt(dx * dx + dz * dz) <= 2 then
-				break
-			end
-		end
-		runService.Heartbeat:Wait()
-	end
-
-	Tweening.stop(TWEEN_IDENTIFIER)
-end
-
-local function placeCampfires()
-	for index, cframe in ipairs(PLACE_LOCATIONS) do
-		if not AutoFerryman.running then
-			return
-		end
-
-		AutoFerryman.setAction(string.format(TEXT.placingCampfire, index, #PLACE_LOCATIONS))
-
-		moveTo(cframe)
-		if not AutoFerryman.running then
-			return
-		end
-
-		local character = localPlayer and localPlayer.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if root then
-			root.CFrame = cframe
-		end
-
-		local tool = equipCampfirePit()
-		if tool then
-			task.wait(0.3)
-			pcall(function()
-				tool:Activate()
-			end)
-		end
-
-		task.wait(1)
-
-		local flint = equipFlint()
-		if not flint then
-			return
-		end
-
-		task.wait(0.3)
-		pcall(function()
-			flint:Activate()
-		end)
-
-		task.wait(1)
-	end
-end
-
----@return boolean ok
-local function acquireCampfires()
-	while AutoFerryman.running do
-		AutoFerryman.setAction(TEXT.checkingCampfires)
-
-		local campfires = getToolQuantity("Campfire Pit")
-		if campfires >= REQUIRED_CAMPFIRES then
-			return true
-		end
-
-		local needed = REQUIRED_CAMPFIRES - campfires
-
-		if craftableCampfires() >= needed then
-			AutoFerryman.setAction(string.format(TEXT.craftingCampfires, needed))
-			craftCampfires(needed)
-
-			local before = campfires
-			local deadline = os.clock() + 12
-			repeat
-				task.wait(0.5)
-			until (not AutoFerryman.running)
-				or getToolQuantity("Campfire Pit") > before
-				or os.clock() >= deadline
-
-			if not AutoFerryman.running then
-				return false
-			end
-
-			if getToolQuantity("Campfire Pit") <= before then
-				AutoFerryman.setAction(TEXT.campfireCraftFailed)
-				AutoFerryman.hop(TEXT.reasonCraftFailed)
-				return false
-			end
-		else
-			if not chopTree() then
-				return false
-			end
-			task.wait(1)
-		end
-	end
-
-	return false
-end
-
----@param meshName string
----@return BasePart?
-local function findNearestIngredient(meshName)
-	local ingredients = workspace:FindFirstChild(INGREDIENTS_FOLDER)
-	if not ingredients then
-		return nil
-	end
-
-	local character = localPlayer and localPlayer.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local origin = (root and root.Position) or MINER_TARGET
-
-	local best, bestDistance = nil, math.huge
-
-	for _, object in next, ingredients:GetDescendants() do
-		if object:IsA("BasePart") and object.Name == meshName and object.Parent then
-			if (object.Position - MINER_TARGET).Magnitude <= MINER_RANGE then
-				local distance = (object.Position - origin).Magnitude
-				if distance < bestDistance then
-					best = object
-					bestDistance = distance
-				end
-			end
-		end
-	end
-
-	return best
-end
-
----@return Tool?
-local function equipPickaxe()
-	local character = localPlayer and localPlayer.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not character or not humanoid then
-		return nil
-	end
-
-	local equipped = character:FindFirstChild("Pickaxe")
-	if equipped and equipped:IsA("Tool") then
-		return equipped
-	end
-
-	local backpack = localPlayer:FindFirstChild("Backpack")
-	local tool = backpack and backpack:FindFirstChild("Pickaxe")
-	if not (tool and tool:IsA("Tool")) then
-		return nil
-	end
-
-	pcall(function()
-		humanoid:EquipTool(tool)
-	end)
-
-	return character:FindFirstChild("Pickaxe")
-end
-
----@param meshName string
----@param itemName string
----@return boolean ok
-local function mineIngredient(meshName, itemName)
-	local before = getItemCount(itemName)
-
-	while AutoFerryman.running do
-		if getItemCount(itemName) > before then
-			return true
-		end
-
-		local mesh = findNearestIngredient(meshName)
-		local deadline = os.clock() + 60
-		while not mesh and AutoFerryman.running do
-			if os.clock() >= deadline then
-				AutoFerryman.hop(string.format(TEXT.reasonNoMesh, meshName))
-				return false
-			end
-			AutoFerryman.setAction(string.format(TEXT.waitingForMesh, meshName))
-			task.wait(1)
-			mesh = findNearestIngredient(meshName)
-		end
-		if not AutoFerryman.running or not mesh then
-			return false
-		end
-
-		AutoFerryman.setAction(string.format(TEXT.miningMesh, meshName))
-		moveTo(CFrame.new(mesh.Position))
-		if not AutoFerryman.running then
-			return false
-		end
-
-		equipPickaxe()
-		Prompt.fire(mesh:FindFirstChild(INTERACT_PROMPT_NAME))
-
-		task.wait(1)
-	end
-
-	return false
-end
-
----@return boolean ok
-local function craftFlint()
-	if not AutoFerryman.running then
-		return false
-	end
-
-	local umbral = getItemCount("Umbral Obsidian") >= 1
-
-	AutoFerryman.setAction(umbral and TEXT.craftingUmbralFlint or TEXT.craftingFlint)
-
-	local before = flintUses()
-	if umbral then
-		craftBatch({ ["Umbral Obsidian"] = true, Coal = true }, "Umbral Flint", 1)
-	else
-		craftBatch({ Coal = true, Rock = true }, "Flint", 1)
-	end
-
-	local deadline = os.clock() + 12
-	repeat
-		task.wait(0.5)
-	until (not AutoFerryman.running) or flintUses() > before or os.clock() >= deadline
-
-	if not AutoFerryman.running then
-		return false
-	end
-
-	if flintUses() > before then
-		return true
-	end
-
-	AutoFerryman.setAction(TEXT.flintCraftFailed)
-	AutoFerryman.hop(TEXT.reasonFlintCraftFailed)
-	return false
-end
-
----@return boolean ok
-local function mineForFlint()
-	local umbral = getItemCount("Umbral Obsidian") >= 1
-	local needCoal = getItemCount("Coal") < 1
-	local needRock = (not umbral) and getItemCount("Rock") < 1
-
-	if needCoal or needRock then
-		local character = localPlayer and localPlayer.Character
-		local backpack = localPlayer and localPlayer:FindFirstChild("Backpack")
-		local hasPickaxe = (character and character:FindFirstChild("Pickaxe"))
-			or (backpack and backpack:FindFirstChild("Pickaxe"))
-		if not hasPickaxe then
-			Logger.notify(TEXT.noPickaxeNotify)
-			AutoFerryman.stop()
-			pcall(function()
-				localPlayer:Kick(TEXT.kickNoPickaxe)
-			end)
-			return false
-		end
-
-		local startRoot = localPlayer and localPlayer.Character
-			and localPlayer.Character:FindFirstChild("HumanoidRootPart")
-		local alreadyNear = false
-		if startRoot then
-			local dx = MINER_TARGET.X - startRoot.Position.X
-			local dz = MINER_TARGET.Z - startRoot.Position.Z
-			alreadyNear = math.sqrt(dx * dx + dz * dz) <= ISLAND_NEAR_RANGE
-		end
-
-		if not alreadyNear then
-			flying = true
-			tweenTo(Vector3.new(MINER_TARGET.X, FERRYMAN_TWEEN_Y, MINER_TARGET.Z), "Miners Landing")
-		end
-		if not AutoFerryman.running then
-			return false
-		end
-
-		Tweening.stop(TWEEN_IDENTIFIER)
-		local root = localPlayer and localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if root then
-			root.CFrame = CFrame.new(MINER_TARGET)
-		end
-		flying = false
-		lastDescentClock = os.clock()
-
-		if not AutoFerryman.running then
-			return false
-		end
-
-		equipPickaxe()
-
-		if needCoal and not mineIngredient("Coal", "Coal") then
-			return false
-		end
-		if needRock and not mineIngredient("Rock", "Rock") then
-			return false
-		end
-	end
-
-	return craftFlint()
-end
-
-local function runRoutine()
-	if flintUses() < REQUIRED_CAMPFIRES then
-		if mineForFlint() then
-			return runRoutine()
-		end
-		return
-	end
-
-	local startCharacter = localPlayer and localPlayer.Character
-	local startRoot = startCharacter and startCharacter:FindFirstChild("HumanoidRootPart")
-	local alreadyNear = false
-	if startRoot then
-		local dx = FERRYMAN_TARGET.X - startRoot.Position.X
-		local dz = FERRYMAN_TARGET.Z - startRoot.Position.Z
-		alreadyNear = math.sqrt(dx * dx + dz * dz) <= ISLAND_NEAR_RANGE
-	end
-
-	if not alreadyNear then
-		flying = true
-		tweenTo(Vector3.new(FERRYMAN_TARGET.X, FERRYMAN_TWEEN_Y, FERRYMAN_TARGET.Z))
-	end
-
-	if not AutoFerryman.running then
-		return
-	end
-
-	Tweening.stop(TWEEN_IDENTIFIER)
-
-	local character = localPlayer and localPlayer.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if root then
-		root.CFrame = CFrame.new(FERRYMAN_TARGET.X, FERRYMAN_DESCENT_Y, FERRYMAN_TARGET.Z)
-	end
-	flying = false
-	lastDescentClock = os.clock()
-
-	if not AutoFerryman.running then
-		return
-	end
-
-	if not acquireCampfires() then
-		if not hopping then
-			AutoFerryman.stop()
-		end
-		return
-	end
-
-	if not AutoFerryman.running then
-		return
-	end
-
-	AutoFerryman.setAction(TEXT.campfiresReady)
-
-	while AutoFerryman.running do
-		local campfire = findNearbyCampfire()
-		if not campfire then
-			break
-		end
-
-		AutoFerryman.setAction(TEXT.breakingCampfire)
-		if not chopModel(campfire) then
-			return
-		end
-	end
-
-	if not AutoFerryman.running then
-		return
-	end
-
-	placeCampfires()
-
-	if not AutoFerryman.running then
-		return
-	end
-
-	AutoFerryman.setAction(TEXT.campfiresPlaced)
-end
-
----@return Model?
-local function findFerrymanNpc()
-	local npcs = workspace:FindFirstChild(NPCS_FOLDER)
-	local ferryman = npcs and npcs:FindFirstChild(FERRYMAN_NPC_NAME)
-	if ferryman and ferryman:IsA("Model") then
-		return ferryman
-	end
-	return nil
-end
-
----@param keyCode Enum.KeyCode
-local function pressKey(keyCode)
-	pcall(function()
-		local vim = Instance.new("VirtualInputManager")
-		vim:SendKeyEvent(true, keyCode, false, game)
-		vim:SendKeyEvent(false, keyCode, false, game)
-	end)
-end
-
----@return Model?
-local function findBossModel()
-	local live = workspace:FindFirstChild(LIVE_FOLDER)
-	local boss = live and live:FindFirstChild(BOSS_MODEL_NAME)
-	if boss and boss:IsA("Model") then
-		return boss
-	end
-	return nil
-end
-
----@param boss Instance
----@return boolean
-local function bossDoingAction(boss)
-	local animator = boss:FindFirstChildWhichIsA("Animator", true)
-	if not animator then
-		return false
-	end
-
-	local ok, tracks = pcall(function()
-		return animator:GetPlayingAnimationTracks()
-	end)
-	if not ok or not tracks then
-		return false
-	end
-
-	for _, track in next, tracks do
-		local anim = track.Animation
-		if anim and tostring(anim.AnimationId):find(BOSS_HOLD_ANIM_ID, 1, true) then
-			return true
-		end
-	end
-
-	return false
-end
-
----@return boolean
-local function isWeaponDrawn()
-	local effectReplicator = replicatedStorage:FindFirstChild("EffectReplicator")
-	local module = effectReplicator and require(effectReplicator)
-	if not module then
-		return false
-	end
-	local ok, has = pcall(function()
-		return module:HasEffect("Equipped")
-	end)
-	return ok and has == true
-end
-
----@return Tool?
-local function equipWeapon()
-	local character = localPlayer and localPlayer.Character
-	if not character then
-		return nil
-	end
-
-	local tool = character:FindFirstChild(WEAPON_NAME)
-	if not (tool and tool:IsA("Tool")) then
-		local backpack = localPlayer:FindFirstChild("Backpack")
-		tool = backpack and backpack:FindFirstChild(WEAPON_NAME)
-	end
-	if not (tool and tool:IsA("Tool")) then
-		return nil
-	end
-
-	if not isWeaponDrawn() then
-		local handler = character:FindFirstChild("CharacterHandler")
-		local requests = handler and handler:FindFirstChild("Requests")
-		local drawEvent = requests and requests:FindFirstChild("DrawWeapon")
-		if drawEvent then
-			pcall(function()
-				drawEvent:FireServer(true)
-			end)
-		end
-	end
-
-	return tool
-end
-
-local function enableBossCombat()
-	if Options then
-		if Options.BlockInputAllowedTargets then
-			Options.BlockInputAllowedTargets:SetValue({ PVE = true })
-		end
-		if Options.BlockedSafeInputUserMoves then
-			Options.BlockedSafeInputUserMoves:SetValue({ M1s = true, Criticals = true, Mantras = true })
-		end
-		if Options.AutoFeintOwnTags then
-			Options.AutoFeintOwnTags:SetValue({ M1s = true, Mantras = true })
-		end
-		if Options.AutoFeintAgainstTags then
-			Options.AutoFeintAgainstTags:SetValue({ M1s = true, Mantras = true, Criticals = true })
-		end
-	end
-
-	if Toggles then
-		if Toggles.EnableAutoDefense then
-			Toggles.EnableAutoDefense:SetValue(true)
-		end
-		if Toggles.BlockInput then
-			Toggles.BlockInput:SetValue(true)
-		end
-		if Toggles.AutoFeint then
-			Toggles.AutoFeint:SetValue(true)
-		end
-		if Toggles.PathfindBreaker then
-			Toggles.PathfindBreaker:SetValue(true)
-		end
-	end
-end
-
----@param choicePrompt Instance
----@param names table
----@return boolean selected
-local function lootMatchingItems(choicePrompt, names)
-	local frame = choicePrompt:FindFirstChild("ChoiceFrame")
-	local options = frame and frame:FindFirstChild("Options")
-	local choice = choicePrompt:FindFirstChild("Choice")
-	if not options or not choice then
-		return false
-	end
-
-	local selected = false
-	for _, button in next, options:GetChildren() do
-		if not button:IsA("TextButton") then
-			continue
-		end
-		local title = button:FindFirstChild("Title")
-		local text = title and title.Text
-		if not text then
-			continue
-		end
-		local lower = text:lower()
-		for _, name in next, names do
-			if type(name) == "string" and lower:find(name:lower(), 1, true) then
-				pcall(function()
-					choice:FireServer(button.Name)
-				end)
-				selected = true
-				task.wait(0.1)
-				break
-			end
-		end
-	end
-	return selected
-end
-
----@param looted table<Instance, boolean>
----@return Model?
-local function nextChest(looted)
-	local thrown = workspace:FindFirstChild(THROWN_FOLDER)
-	if not thrown then
-		return nil
-	end
-	for _, model in next, thrown:GetChildren() do
-		if
-			model:IsA("Model")
-			and model.Name == CHEST_MODEL_NAME
-			and not looted[model]
-			and not collectionService:HasTag(model, LOOTED_TAG)
-			and model:FindFirstChild(INTERACT_PROMPT_NAME, true)
-		then
-			return model
-		end
-	end
-	return nil
-end
-
-local function lootChests()
-	AutoFerryman.setAction(TEXT.lootingChests)
-
-	local wanted = Configuration.expectOptionValues("ItemNameList") or {}
-	local starsMin = Configuration.expectOptionValue("AutoLootStarsMin") or 0
-	local starsMax = Configuration.expectOptionValue("AutoLootStarsMax") or 4
-	local lootAll = Configuration.expectToggleValue("AutoLootAll") or false
-	local always = { ALWAYS_LOOT }
-
-	local playerGui = localPlayer and localPlayer:FindFirstChildOfClass("PlayerGui")
-
-	AutoLoot.ignore = true
-
-	local looted = {}
-	local attempts = {}
-	local lootedCount = 0
-	local spawnDeadline = os.clock() + 30
-	while AutoFerryman.running and lootedCount < CHEST_COUNT and os.clock() < spawnDeadline do
-		local chest = nextChest(looted)
-		if not chest then
-			AutoFerryman.setAction(TEXT.waitingForChests)
-			task.wait(0.5)
-			continue
-		end
-
-		attempts[chest] = (attempts[chest] or 0) + 1
-		if attempts[chest] > 4 then
-			looted[chest] = true
-			pcall(function()
-				collectionService:AddTag(chest, LOOTED_TAG)
-			end)
-			continue
-		end
-
-		AutoFerryman.setAction(TEXT.lootingChest)
-
-		local ok, pivot = pcall(function()
-			return chest:GetPivot().Position
-		end)
-		if ok then
-			moveTo(CFrame.new(pivot))
-		end
-		if not AutoFerryman.running then
-			break
-		end
-
-		local prompt = chest:FindFirstChild(INTERACT_PROMPT_NAME, true)
-		local choicePrompt = nil
-		local deadline = os.clock() + 6
-		repeat
-			Prompt.fire(prompt)
-			choicePrompt = playerGui and playerGui:FindFirstChild("ChoicePrompt")
-			task.wait(0.2)
-		until choicePrompt or os.clock() >= deadline or not AutoFerryman.running
-
-		if choicePrompt and AutoFerryman.running then
-			pcall(function()
-				choicePrompt:WaitForChild("ChoiceFrame", 3):WaitForChild("Options", 3)
-			end)
-
-			local names = {}
-			for _, name in next, wanted do
-				names[#names + 1] = name
-			end
-			names[#names + 1] = ALWAYS_LOOT
-			pcall(function()
-				lootMatchingItems(choicePrompt, names)
-			end)
-
-			AutoLoot.process(choicePrompt, AutoLootOptions.new(starsMin, starsMax, wanted, lootAll, always))
-
-			local lootDeadline = os.clock() + 15
-			repeat
-				task.wait(0.1)
-			until (not choicePrompt.Parent) or os.clock() >= lootDeadline or not AutoFerryman.running
-
-			looted[chest] = true
-			pcall(function()
-				collectionService:AddTag(chest, LOOTED_TAG)
-			end)
-			lootedCount = lootedCount + 1
-			spawnDeadline = os.clock() + 30
-		end
-
-		task.wait(0.3)
-	end
-
-	AutoLoot.ignore = false
-end
-
-local function bossRoutine()
-	local ferryman = findFerrymanNpc()
-	if not ferryman then
-		AutoFerryman.setAction(TEXT.ferrymanNotFound)
-		AutoFerryman.stop()
-		return
-	end
-
-	AutoFerryman.setAction(TEXT.tweeningToFerryman)
-	local ok, pivot = pcall(function()
-		return ferryman:GetPivot().Position
-	end)
-	if ok then
-		moveTo(CFrame.new(pivot))
-	end
-	if not AutoFerryman.running then
-		return
-	end
-
-	AutoFerryman.setAction(TEXT.talkingToFerryman)
-
-	local playerGui = localPlayer and localPlayer:FindFirstChildOfClass("PlayerGui")
-
-	while AutoFerryman.running do
-		local currentFerryman = findFerrymanNpc()
-		if not currentFerryman then
-			break
-		end
-
-		if timeoutDeadline and os.clock() >= timeoutDeadline then
-			AutoFerryman.hop(TEXT.reasonTimeout)
-			return
-		end
-
-		local dialogueGui = playerGui and playerGui:FindFirstChild("DialogueGui")
-		if dialogueGui and dialogueGui.Enabled then
-			break
-		end
-
-		Prompt.fire(currentFerryman:FindFirstChild(INTERACT_PROMPT_NAME, true))
-
-		setActionText(TEXT.talkingToFerryman)
-		task.wait(0.5)
-	end
-
-	if not AutoFerryman.running then
-		return
-	end
-
-	setActionText(TEXT.advancingDialogue)
-	local requests = replicatedStorage:FindFirstChild("Requests")
-	local sendDialogue = requests and requests:FindFirstChild("SendDialogue")
-	for index, choice in ipairs(FERRYMAN_DIALOGUE_CHOICES) do
-		if not AutoFerryman.running then
-			return
-		end
-		if sendDialogue then
-			pcall(function()
-				sendDialogue:FireServer({ choice = choice })
-			end)
-		end
-		if index < #FERRYMAN_DIALOGUE_CHOICES then
-			task.wait(0.5)
-		end
-	end
-
-	AutoFerryman.setAction(TEXT.dialogueComplete)
-
-	AutoFerryman.setAction(TEXT.waitingForBoss)
-	while AutoFerryman.running and not findBossModel() do
-		task.wait(0.5)
-	end
-	if not AutoFerryman.running then
-		return
-	end
-
-	enableBossCombat()
-
-	local weapon = equipWeapon()
-	if not weapon then
-		AutoFerryman.setAction(TEXT.noWeapon)
-		Logger.notify(TEXT.noWeaponNotify)
-		AutoFerryman.stop()
-		return
-	end
-
-	armTimeout(BOSS_FIGHT_TIMEOUT)
-	while AutoFerryman.running do
-		if timeoutDeadline and os.clock() >= timeoutDeadline then
-			AutoFerryman.setAction(TEXT.bossFightTimedOut)
-			Logger.notify(TEXT.bossTimedOutNotify)
-			AutoFerryman.stop()
-			return
-		end
-
-		local boss = findBossModel()
-		if not boss then
-			break
-		end
-
-		local ok, bossPos = pcall(function()
-			return boss:GetPivot().Position
-		end)
-		if ok then
-			local root = localPlayer and localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-			if bossDoingAction(boss) then
-				Tweening.stop(CHOP_TWEEN_IDENTIFIER)
-			else
-				local underPos = bossPos - Vector3.new(0, BOSS_UNDER_OFFSET, 0) + Vector3.new(0.1, 0, 0)
-				Tweening.goal(CHOP_TWEEN_IDENTIFIER, CFrame.lookAt(underPos, bossPos), false)
-
-				equipWeapon()
-				setActionText(TEXT.fightingFerryman)
-				local aim = root and CFrame.new(root.Position, bossPos) or CFrame.new(bossPos)
-				pcall(function()
-					InputClient.left(aim, true)
-				end)
-			end
-		end
-
-		task.wait(CHOP_SWING_INTERVAL)
-	end
-
-	Tweening.stop(CHOP_TWEEN_IDENTIFIER)
-
-	if not AutoFerryman.running then
-		return
-	end
-
-	cycles = cycles + 1
-	saveState()
-	AutoFerryman.setAction(TEXT.bossDefeated)
-
-	lootChests()
-
-	if not AutoFerryman.running then
-		return
-	end
-
-	AutoFerryman.setAction(TEXT.chestsLooted)
-
-	AutoFerryman.hop(TEXT.reasonCycleComplete)
-end
-
----@param text string?
-function AutoFerryman.setAction(text)
-	setActionText(text)
-	armTimeout(DEFAULT_TIMEOUT)
-end
-
----@param name string
----@return boolean
-local function toolPresent(name)
-	local character = localPlayer and localPlayer.Character
-	local backpack = localPlayer and localPlayer:FindFirstChild("Backpack")
-	if character and character:FindFirstChild(name) then
-		return true
-	end
-	if backpack and backpack:FindFirstChild(name) then
-		return true
-	end
-	return false
-end
-
----@return boolean
-local function requirementsMet()
-	local character = localPlayer and localPlayer.Character
-	if not character then
-		return false
-	end
-	local backpack = localPlayer and localPlayer:FindFirstChild("Backpack")
-	return backpack ~= nil and #backpack:GetChildren() > 0
-end
-
----@param timeout number?
----@return boolean loaded
-local function waitForBackpack(timeout)
-	local deadline = os.clock() + (timeout or 10)
-	while os.clock() < deadline do
-		local backpack = localPlayer and localPlayer:FindFirstChild("Backpack")
-		if backpack and #backpack:GetChildren() > 0 then
-			return true
-		end
-		task.wait(0.1)
-	end
-	return false
-end
-
-function AutoFerryman.start()
-	if AutoFerryman.running then
-		return
-	end
-
-	if game.PlaceId == DEPTHS_PLACE_ID then
-		AutoFerryman.stop()
-		pcall(function()
-			localPlayer:Kick(TEXT.kickDepths)
-		end)
-		return
-	end
-
-	local mode
-	if AutoFerryman.inEasternLuminant() then
-		mode = "gather"
-	elseif AutoFerryman.inBossDungeon() then
-		mode = "boss"
-	else
-		return Logger.notify(TEXT.notInPlace)
-	end
-
-	hopping = false
-	flying = false
-	timeoutDeadline = nil
-	lastDescentClock = nil
-	startClock = os.clock()
-
-	local resumeData = PersistentData.get("afdata") or {}
-	cycles = resumeData.cycles or 0
-	baseElapsed = resumeData.elapsed or 0
-
-	local firstStart = not resumeData.active
-
-	if firstStart then
-		startSlot = currentSlot()
-	else
-		startSlot = resumeData.slot
-	end
-
-	local loadingGuiParent = localPlayer and localPlayer:FindFirstChildOfClass("PlayerGui")
-	if loadingGuiParent and loadingGuiParent:FindFirstChild("LoadingGui") then
-		local deadline = os.clock() + 10
-		while not requirementsMet() and os.clock() < deadline do
-			pressKey(Enum.KeyCode.A)
-			task.wait(0.25)
-		end
-
-		if not requirementsMet() then
-			AutoFerryman.running = true
-			return AutoFerryman.hop(TEXT.reasonLoadingTimeout)
-		end
-	end
-
-	waitForBackpack(10)
-
-	if firstStart and not (toolPresent("Pickaxe") and toolPresent("Lumber Axe")) then
-		return Logger.notify(TEXT.needTools)
-	end
-
-	AutoFerryman.running = true
-
-	saveState()
-
-	buildOverlay()
-	AutoFerryman.setAction(nil)
-	if timerLabel then
-		timerLabel.Text = formatElapsed(baseElapsed)
-	end
-	if timeoutLabel then
-		timeoutLabel.Text = TEXT.timeoutNone
-	end
-	if cyclesLabel then
-		cyclesLabel.Text = string.format(TEXT.cycles, cycles)
-	end
-	if screenGui then
-		screenGui.Enabled = true
-	end
-
-	applyHighlight()
-	applyTweenSpeed()
-	applyNoFallDamage()
-	applyFly()
-	applyDefenseFilter()
-	applyNoClip()
-
-	characterAddedConnection = localPlayer.CharacterAdded:Connect(function()
-		if not AutoFerryman.running then
-			return
-		end
-		task.wait(0.2)
-		applyHighlight()
-	end)
-
-	timerConnection = runService.Heartbeat:Connect(function()
-		if not AutoFerryman.running then
-			return
-		end
-		if timerLabel then
-			timerLabel.Text = formatElapsed(currentElapsed())
-		end
-		if cyclesLabel then
-			cyclesLabel.Text = string.format(TEXT.cycles, cycles)
-		end
-		if timeoutLabel then
-			if timeoutDeadline then
-				local remaining = math.max(0, timeoutDeadline - os.clock())
-				timeoutLabel.Text = string.format(TEXT.timeout, math.floor(remaining / 60), math.floor(remaining % 60))
-			else
-				timeoutLabel.Text = TEXT.timeoutNone
-			end
-		end
-	end)
-
-	weaponConnection = runService.Heartbeat:Connect(function()
-		if not AutoFerryman.running then
-			return
-		end
-		if not findBossModel() then
-			return
-		end
-		if not isWeaponDrawn() then
-			equipWeapon()
-		end
-	end)
-
-	if mode == "boss" then
-		task.spawn(function()
-			task.wait(2)
-			if AutoFerryman.running then
-				bossRoutine()
-			end
-		end)
-	else
-		task.spawn(watchForNearbyPlayers)
-		task.spawn(function()
-			task.wait(2)
-			if AutoFerryman.running then
-				runRoutine()
-			end
-		end)
-	end
-
-	Logger.notify(TEXT.started)
-end
-
-local function teardown()
-	AutoFerryman.running = false
-	timeoutDeadline = nil
-
-	if flying then
-		Tweening.stop(TWEEN_IDENTIFIER)
-		local character = localPlayer and localPlayer.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if root then
-			pcall(function()
-				root.CFrame = CFrame.new(FERRYMAN_TARGET.X, FERRYMAN_DESCENT_Y, FERRYMAN_TARGET.Z)
-			end)
-		end
-	end
-	flying = false
-
-	if timerConnection then
-		pcall(function()
-			timerConnection:Disconnect()
-		end)
-		timerConnection = nil
-	end
-
-	if characterAddedConnection then
-		pcall(function()
-			characterAddedConnection:Disconnect()
-		end)
-		characterAddedConnection = nil
-	end
-
-	if weaponConnection then
-		pcall(function()
-			weaponConnection:Disconnect()
-		end)
-		weaponConnection = nil
-	end
-
-	removeHighlight()
-
-	Tweening.stop(TWEEN_IDENTIFIER)
-	Tweening.stop(CHOP_TWEEN_IDENTIFIER)
-	restoreTweenSpeed()
-	restoreNoFallDamage()
-	restoreFly()
-	restoreDefenseFilter()
-	restoreNoClip()
-
-	if screenGui then
-		screenGui.Enabled = false
-	end
-end
-
----@param reason string
-function AutoFerryman.hop(reason)
-	if hopping then
-		return
-	end
-	hopping = true
-
-	Logger.notify(TEXT.hopNotify, reason)
-
-	local blacklist = PersistentData.get("sblacklist") or {}
-	blacklist[game.JobId] = tick()
-	PersistentData.set("sblacklist", blacklist)
-
-	saveState()
-
-	teardown()
-
-	local slot = startSlot or (localPlayer and localPlayer:GetAttribute("DataSlot"))
-	ServerHop.hop(slot, false)
-end
-
-function AutoFerryman.stop()
-	if not AutoFerryman.running and not PersistentData.get("afdata") then
-		return
-	end
-
-	teardown()
-
-	PersistentData.set("afdata", nil)
-
-	Logger.notify(TEXT.stopped)
-end
-
-return AutoFerryman
+-- Return Lynaria module.
+return Lynaria
 
 end)
 __bundle_register("Game/PlayerScanning", function(require, _LOADED, __bundle_register, __bundle_modules)
@@ -2685,7 +542,7 @@ local runPlayerScans = LPH_NO_VIRTUALIZE(function()
 	end
 
 	for player, _ in next, PlayerScanning.scanQueue do
-		if shared.Lycoris.dpscanning then
+		if shared.Lynaria.dpscanning then
 			continue
 		end
 
@@ -3536,7 +1393,7 @@ return LPH_NO_VIRTUALIZE(function()
 	---@param str string
 	---@return string
 	local function buildPrefixString(str)
-		return string.format("[%s %s] [Lycoris Recode]: %s", os.date("%x"), os.date("%X"), str)
+		return string.format("[%s %s] [Lynaria Recode]: %s", os.date("%x"), os.date("%X"), str)
 	end
 
 	---Create a manually managed notification.
@@ -3568,7 +1425,7 @@ return LPH_NO_VIRTUALIZE(function()
 	---Warn message.
 	---@param str string
 	function Logger.warn(str, ...)
-		if shared.Lycoris.silent then
+		if shared.Lynaria.silent then
 			return
 		end
 
@@ -3578,7 +1435,7 @@ return LPH_NO_VIRTUALIZE(function()
 	---Trace & warn message.
 	---@param str string
 	function Logger.trace(str, ...)
-		if shared.Lycoris.silent then
+		if shared.Lynaria.silent then
 			return
 		end
 
@@ -7219,7 +5076,7 @@ return LPH_NO_VIRTUALIZE(function()
 
 					if Root then
 						local Marker = Instance.new("Part")
-						Marker.Name = "LycorisMarker"
+						Marker.Name = "LynariaMarker"
 						Marker.Size = Vector3.new(1, 1, 1)
 						Marker.Anchored = true
 						Marker.CanCollide = false
@@ -7535,7 +5392,7 @@ return LPH_NO_VIRTUALIZE(function()
 	end
 
 	function Library:ManuallyManagedNotify(Text)
-		if shared.Lycoris.silent then
+		if shared.Lynaria.silent then
 			return
 		end
 
@@ -7657,7 +5514,7 @@ return LPH_NO_VIRTUALIZE(function()
 	end
 
 	function Library:Notify(Text, Time)
-		if shared.Lycoris.silent then
+		if shared.Lynaria.silent then
 			return
 		end
 
@@ -8977,9 +6834,9 @@ __bundle_register("Utility/Profiler", function(require, _LOADED, __bundle_regist
 return LPH_NO_VIRTUALIZE(function()
 	local Profiler = {}
 
-	-- Opt-in: set getgenv().LycorisProfile = true before executing. When off, run/wrap are
+	-- Opt-in: set getgenv().LynariaProfile = true before executing. When off, run/wrap are
 	-- pass-throughs with no overhead.
-	local enabled = getgenv ~= nil and getgenv().LycorisProfile == true
+	local enabled = getgenv ~= nil and getgenv().LynariaProfile == true
 	local reportInterval = 10.0
 	local stats = {}
 
@@ -11070,7 +8927,7 @@ InputClient.cache = LPH_NO_VIRTUALIZE(function()
 		if functionName == "Sprint" then
 			InputClient.sprintFunctionCache = value
 
-			if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+			if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 				Logger.warn("Sprint function (%s) cache successful.", tostring(value))
 			end
 		end
@@ -11078,7 +8935,7 @@ InputClient.cache = LPH_NO_VIRTUALIZE(function()
 		if functionName == "Roll" then
 			InputClient.rollFunctionCache = value
 
-			if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+			if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 				Logger.warn("Roll function (%s) cache successful.", tostring(value))
 			end
 		end
@@ -11551,7 +9408,7 @@ KeyHandling.init = LPH_NO_VIRTUALIZE(function()
 		end
 
 		-- Retry if we can't find the data.
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn(
 				"KeyHandler retry (%i attempts) with results (%s, %s)",
 				retries,
@@ -11628,7 +9485,7 @@ local Logger = require("Utility/Logger")
 -- PersistentData module.
 local PersistentData = {
 	_data = {
-		-- First timestamp of when Lycoris was loaded.
+		-- First timestamp of when Lynaria was loaded.
 		fli = nil,
 
 		-- Server hop slot.
@@ -11682,7 +9539,7 @@ function PersistentData.set(field, value)
 	local saveSuccess, saveResult = pcall(
 		memStorageService.SetItem,
 		memStorageService,
-		"LYCORIS_PERSISTENT_DATA",
+		"LYNARIA_PERSISTENT_DATA",
 		Serializer.marshal(PersistentData._data)
 	)
 
@@ -11690,25 +9547,25 @@ function PersistentData.set(field, value)
 		return Logger.warn("(%s) Failed to set PersistentData snapshot.", tostring(saveResult))
 	end
 
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("(%s) Successfully set PersistentData snapshot.", tostring(saveResult))
 	end
 end
 
 ---Initialize PersistentData module.
 function PersistentData.init()
-	local hasSuccess, hasResult = pcall(memStorageService.HasItem, memStorageService, "LYCORIS_PERSISTENT_DATA")
+	local hasSuccess, hasResult = pcall(memStorageService.HasItem, memStorageService, "LYNARIA_PERSISTENT_DATA")
 	if not hasSuccess then
 		return hasResult and Logger.warn("(%s) Failed to check for PersistentData snapshot.", tostring(hasResult))
 	end
 
-	local itemSuccess, itemResult = pcall(memStorageService.GetItem, memStorageService, "LYCORIS_PERSISTENT_DATA")
+	local itemSuccess, itemResult = pcall(memStorageService.GetItem, memStorageService, "LYNARIA_PERSISTENT_DATA")
 	if not itemSuccess then
 		return Logger.warn("(%s) Failed to get PersistentData snapshot", tostring(itemResult))
 	end
 
 	if itemResult == nil or itemResult == "" then
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn("PersistentData snapshot is missing or empty.")
 		end
 
@@ -11720,7 +9577,7 @@ function PersistentData.init()
 		return Logger.warn("(%s) Failed to deserialize PersistentData snapshot.", tostring(result))
 	end
 
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("(%s) Successfully loaded PersistentData snapshot.", tostring(result))
 	end
 
@@ -12101,7 +9958,7 @@ __bundle_register("Utility/Serializer", function(require, _LOADED, __bundle_regi
 --[[
  * MessagePack serializer / decode (0.6.1) written in pure Lua 5.3 / Lua 5.4
  * written by Sebastian Steinhauer <s.steinhauer@yahoo.de>
- * modified by the Lycoris Team <discord.gg/lyc>
+ * modified by the Lynaria Team <discord.gg/lyc>
  *
  * This is free and unencumbered software released into the public domain.
  *
@@ -23147,7 +21004,7 @@ local Signal = require("Utility/Signal")
 local Configuration = require("Utility/Configuration")
 
 -- Module filesystem.
-local fs = Filesystem.new("Lycoris-Rewrite-Modules")
+local fs = Filesystem.new("Lynaria-Rewrite-Modules")
 local gfs = Filesystem.new(fs:append("Globals"))
 
 -- Detach table.
@@ -24738,7 +22595,7 @@ function Defense.init()
 	end
 
 	-- Log.
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("Defense initialized.")
 	end
 end
@@ -25913,7 +23770,7 @@ function StateListener.init()
 		onDescendantAdded(descendant)
 	end
 
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("StateListener initialized.")
 	end
 end
@@ -26336,7 +24193,7 @@ local String = require("Utility/String")
 local Serializer = require("Utility/Serializer")
 
 -- Manager filesystem.
-local fs = Filesystem.new("Lycoris-Rewrite-Timings")
+local fs = Filesystem.new("Lynaria-Rewrite-Timings")
 
 -- Current timing save.
 local config = TimingSave.new()
@@ -79751,95 +77608,6 @@ function AnimatorDefender:apProcess(track, occurrence, timing, recovered)
 	self._apStampOccurrence = nil
 end
 
----@param self AnimatorDefender
----@param track AnimationTrack
--- ============================================================================
--- Offensive Experimental AP Breaker (ported from maintainedlyc): makes OUR OWN
--- attacks harder to parry. Independent of the defensive anti-breaker (IngressGuard).
--- ============================================================================
-local APB_BREAK_CUT = 0.15
-local APB_BREAK_FADE = 9
-local APB_BREAK_CLEANUP_DELAY = 1.2
-
-local APB_BREAK_TAGS = {
-	["M1"] = "M1s",
-	["Mantra"] = "Mantras",
-	["Critical"] = "Criticals",
-}
-
----@param timing AnimationTiming
----@return boolean
-local function apbBreakOnTag(timing)
-	local selected = Configuration.expectOptionValue("ExperimentalAPBreakerTags")
-	if type(selected) ~= "table" then
-		return false
-	end
-
-	local display = APB_BREAK_TAGS[timing.tag]
-	if not display then
-		return false
-	end
-
-	return selected[display] == true
-end
-
----@param self AnimatorDefender
----@param track AnimationTrack
----@param timing AnimationTiming
-function AnimatorDefender:_breakOwnAnimation(track, timing)
-	if not Configuration.expectToggleValue("ExperimentalAPBreaker") then
-		return
-	end
-
-	if not apbBreakOnTag(timing) then
-		return
-	end
-
-	if track.Looped then
-		return
-	end
-
-	local speed = track.Speed
-	if speed <= 0 or track.Length <= 0 then
-		return
-	end
-
-	local duration = track.Length / speed
-
-	TaskSpawner.spawn("ExperimentalAPBreaker_Break", function()
-		local untilCut = duration * APB_BREAK_CUT
-		if untilCut > 0 then
-			task.wait(untilCut)
-		end
-
-		if not track.IsPlaying or math.abs(track.Speed) < 0.05 then
-			return
-		end
-
-		track.Priority = Enum.AnimationPriority.Action
-		local followThrough = duration * (1 - APB_BREAK_CUT)
-		track:Stop(followThrough * APB_BREAK_FADE)
-
-		local remaining = followThrough - Latency.sdelay()
-		if remaining > 0 then
-			task.wait(remaining)
-		end
-
-		if track.IsPlaying and math.abs(track.Speed) > 0.05 then
-			return
-		end
-
-		track.TimePosition = track.Length
-		track:Play(0.1, 0, 0)
-
-		task.wait(APB_BREAK_CLEANUP_DELAY)
-
-		if track.IsPlaying then
-			track:Stop(0)
-		end
-	end)
-end
-
 AnimatorDefender.process = LPH_NO_VIRTUALIZE(function(self, track)
 	if canonicalAid(track.Animation and track.Animation.AnimationId) == HIT_REACTION_ANIMATION_ID then
 		task.spawn(function()
@@ -79875,12 +77643,6 @@ AnimatorDefender.process = LPH_NO_VIRTUALIZE(function(self, track)
 
 	if isLocalPlayer then
 		self:asc(track)
-
-		local aid = tostring(track.Animation.AnimationId)
-		local timing = self:initial(self.entity, SaveManager.as, self.entity.Name, aid)
-		if timing then
-			self:_breakOwnAnimation(track, timing)
-		end
 
 		return
 	end
@@ -81966,7 +79728,7 @@ return LPH_NO_VIRTUALIZE(function()
 			return Enum.ContextActionResult.Pass
 		end, false, Enum.KeyCode.D)
 
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn("ControlModule initialized.")
 		end
 	end
@@ -82082,7 +79844,7 @@ function Features.init()
 		AnimationVisualizer.init()
 	end
 
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("Features initialized.")
 	end
 end
@@ -82250,7 +80012,7 @@ return LPH_NO_VIRTUALIZE(function()
 	end
 
 	function RevealAnimations.init()
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn("RevealAnimations initialized.")
 		end
 		revealAnimationsMaid:add(renderStepped:connect("RevealAnimations_RenderStepped", updateRevealAnimations))
@@ -82437,7 +80199,7 @@ function FakeVoid.init()
 	)
 	fakeVoidMaid:add(preSimulation:connect("FakeVoid_PreSimulation", updateFakeVoid))
 
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		local count = 0
 
 		for _ in next, killPlanes do
@@ -82705,7 +80467,7 @@ return LPH_NO_VIRTUALIZE(function()
 			end
 		end))
 
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn("OptimizeGame initialized.")
 		end
 	end
@@ -83493,7 +81255,7 @@ function FishFarm.init()
 	fishFarmMaid:add(renderStepped:connect("FishFarm_RenderStepped", updateFishFarm))
 
 	-- Log.
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("Fish Farm initialized.")
 	end
 end
@@ -84806,7 +82568,7 @@ return LPH_NO_VIRTUALIZE(function()
 			onLiveAdded(entity)
 		end
 
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn("OwnershipWatcher initialized.")
 		end
 	end
@@ -85443,7 +83205,7 @@ return LPH_NO_VIRTUALIZE(function()
 		spoofingMaid:add(pgDescendantAdded:connect("Spoofing_OnPGDescendantAdded", onPgDescendantAdded))
 
 		-- Log.
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn("Spoofing initialized.")
 		end
 	end
@@ -85964,11 +83726,11 @@ return LPH_NO_VIRTUALIZE(function()
 		local path = string.format("%s %s Stolen Build", os.date("%B %d %Y"), player.Name)
 		Logger.notify("Successfully stole %s's build, %s & saved to file.", fetchName(player), buildUrl)
 
-		if not isfolder("Lycoris/Stolen Builds") then
-			makefolder("Lycoris/Stolen Builds")
+		if not isfolder("Lynaria/Stolen Builds") then
+			makefolder("Lynaria/Stolen Builds")
 		end
 		
-		writefile("Lycoris/Stolen Builds/" .. path .. ".txt", string.format([[.gg/lyc
+		writefile("Lynaria/Stolen Builds/" .. path .. ".txt", string.format([[.gg/lyc
 stolen on %s
 build url: %s
 %s]], os.date("%B %d %Y"), buildUrl, data.content.notes))
@@ -86244,7 +84006,7 @@ build url: %s
 		monitoringMaid:add(renderStepped:connect("Monitoring_OnRenderStepped", updateMonitoring))
 
 		-- Log.
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn("Monitoring initialized.")
 		end
 	end
@@ -86970,7 +84732,7 @@ return LPH_NO_VIRTUALIZE(function()
 		end
 
 		-- Log.
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn("Removal initialized.")
 		end
 	end
@@ -89185,7 +86947,7 @@ function Visuals.init()
 		end
 	end
 
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("Visuals initialized.")
 	end
 end
@@ -91362,7 +89124,7 @@ end
 		end)
 
 		-- Log.
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn("Exploits initialized.")
 		end
 	end
@@ -91438,7 +89200,6 @@ return LPH_NO_VIRTUALIZE(function()
 	-- Original stores.
 	local agilitySpoofer = movementMaid:mark(OriginalStore.new())
 	local safeModeEnabled = false
-	local safeModeCeiling = nil
 
 	-- Original store managers.
 	local noClipMap = movementMaid:mark(OriginalStoreManager.new())
@@ -91712,8 +89473,6 @@ local function obfuscate_anim_id(id)
     return made
 end
 
----@note: The experimental AP breaker now lives in Game/Hooking.lua as a
-
 	---Update speed hack.
 	---@param rootPart BasePart
 	---@param humanoid Humanoid
@@ -91774,21 +89533,15 @@ end
 			flyVelocity = flyVelocity + Vector3.new(0, Configuration.expectOptionValue("FlyUpSpeed"), 0)
 		end
 
-		if safeModeEnabled and safeModeCeiling then
-			local position = rootPart.Position
-			if position.Y >= safeModeCeiling then
-				if position.Y > safeModeCeiling then
-					rootPart.CFrame = CFrame.new(position.X, safeModeCeiling, position.Z)
-						* rootPart.CFrame.Rotation
-				end
+		if safeModeEnabled then
+			local maxFlySpeed = 100
+			if flyVelocity.Magnitude > maxFlySpeed then
+				flyVelocity = flyVelocity.Unit * maxFlySpeed
+			end
 
-				local currentVelocity = rootPart.AssemblyLinearVelocity
-				rootPart.AssemblyLinearVelocity = Vector3.new(
-					currentVelocity.X,
-					math.min(currentVelocity.Y, 0),
-					currentVelocity.Z
-				)
-				flyVelocity = Vector3.new(flyVelocity.X, math.min(flyVelocity.Y, 0), flyVelocity.Z)
+			local currentVelocity = rootPart.AssemblyLinearVelocity
+			if currentVelocity.Magnitude > maxFlySpeed then
+				rootPart.AssemblyLinearVelocity = currentVelocity.Unit * maxFlySpeed
 			end
 		end
 
@@ -91952,13 +89705,7 @@ end
 			return
 		end
 
-		local isSafeModeEnabled = Configuration.expectToggleValue("SafeMode")
-		if isSafeModeEnabled and not safeModeEnabled then
-			safeModeCeiling = rootPart.Position.Y + 100
-		elseif not isSafeModeEnabled then
-			safeModeCeiling = nil
-		end
-		safeModeEnabled = isSafeModeEnabled
+		safeModeEnabled = Configuration.expectToggleValue("SafeMode")
 
 		if not Configuration.expectToggleValue("TweenToBack") or not updateTweenToBack() then
 			cachedTarget = nil
@@ -92017,7 +89764,7 @@ end
 		movementMaid:add(heartbeat:connect("Movement_Heartbeat", Tweening.update))
 
 		-- Log.
-		if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+		if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 			Logger.warn("Movement initialized.")
 		end
 	end
@@ -92227,7 +89974,7 @@ function InteligenceFarm.init()
 	autoIntelligenceMaid:add(renderStepped:connect("AttributeFarmIntelligence_OnPreRender", updateInteligence))
 
 	-- Log.
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("Inteligence Farm initialized.")
 	end
 end
@@ -92371,7 +90118,7 @@ function CharismaFarm.init()
 	autoCharismaMaid:add(renderStepped:connect("AttributeFarmCharisma_OnPreRender", updateCharisma))
 
 	-- Log.
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("Charisma Farm initialized.")
 	end
 end
@@ -92418,8 +90165,8 @@ local VisualsTab = require("Menu/VisualsTab")
 ---@module Menu.ExploitTab
 local ExploitTab = require("Menu/ExploitTab")
 
----@module Menu.LycorisTab
-local LycorisTab = require("Menu/LycorisTab")
+---@module Menu.LynariaTab
+local LynariaTab = require("Menu/LynariaTab")
 
 ---@module Utility.Logger
 local Logger = require("Utility/Logger")
@@ -92446,11 +90193,11 @@ local renderStepped = Signal.new(runService.RenderStepped)
 local menuMaid = Maid.new()
 
 -- Constants.
-local MENU_TITLE = "Linoria V3 | Deepwoken"
+local MENU_TITLE = "Lynaria Rewrite | Deepwoken"
 
 if LRM_UserNote then
 	MENU_TITLE = string.format(
-		"Linoria V3 | Deepwoken",
+		"Lynaria Rewrite | Deepwoken",
 		string.sub("6c10af8d79e3dc253ba6db7f343613361c37e378", 1, 6)
 	)
 end
@@ -92461,7 +90208,7 @@ function Menu.init()
 	local window = Library:CreateWindow({
 		Title = MENU_TITLE,
 		Center = true,
-		AutoShow = not shared.Lycoris.silent,
+		AutoShow = not shared.Lynaria.silent,
 		TabPadding = 8,
 		MenuFadeTime = 0.0,
 		Size = UDim2.fromOffset(780, 600),
@@ -92469,12 +90216,12 @@ function Menu.init()
 
 	-- Configure ThemeManager.
 	ThemeManager:SetLibrary(Library)
-	ThemeManager:SetFolder("Lycoris-Rewrite-Themes")
+	ThemeManager:SetFolder("Lynaria-Rewrite-Themes")
 
 	-- Configure SaveManager.
 	SaveManager:SetLibrary(Library)
 	SaveManager:IgnoreThemeSettings()
-	SaveManager:SetFolder("Lycoris-Rewrite-Configs")
+	SaveManager:SetFolder("Lynaria-Rewrite-Configs")
 	SaveManager:SetIgnoreIndexes({
 		"Fly",
 		"NoClip",
@@ -92491,7 +90238,7 @@ function Menu.init()
 	VisualsTab.init(window)
 	AutomationTab.init(window)
 	ExploitTab.init(window)
-	LycorisTab.init(window)
+	LynariaTab.init(window)
 
 	-- Last update.
 	local lastUpdate = os.clock()
@@ -92619,7 +90366,7 @@ function Menu.init()
 		Logger.warn("Menu build breakdown: %s", table.concat(phases, ", "))
 	end
 
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("Menu initialized.")
 	end
 end
@@ -92639,9 +90386,9 @@ end
 return Menu
 
 end)
-__bundle_register("Menu/LycorisTab", function(require, _LOADED, __bundle_register, __bundle_modules)
--- LycorisTab module.
-local LycorisTab = {}
+__bundle_register("Menu/LynariaTab", function(require, _LOADED, __bundle_register, __bundle_modules)
+-- LynariaTab module.
+local LynariaTab = {}
 
 ---@module GUI.Icons
 local Icons = require("GUI/Icons")
@@ -92666,15 +90413,15 @@ local SpotifyWidget = require("GUI/SpotifyWidget")
 
 ---Initialize Cheat Settings section.
 ---@param groupbox table
-function LycorisTab.initCheatSettingsSection(groupbox)
+function LynariaTab.initCheatSettingsSection(groupbox)
 	groupbox:AddButton("Toggle Silent Mode", function()
 		if not isfile or not delfile or not writefile then
 			return
 		end
 
-		shared.Lycoris.silent = not shared.Lycoris.silent
+		shared.Lynaria.silent = not shared.Lynaria.silent
 
-		if not shared.Lycoris.silent then
+		if not shared.Lynaria.silent then
 			Logger.notify("Silent mode was disabled.")
 		end
 
@@ -92683,7 +90430,7 @@ function LycorisTab.initCheatSettingsSection(groupbox)
 		else
 			writefile(
 				"smarker.txt",
-				"Hello, if you're reading this, that means you have Lycoris-Rewrite (Deepwoken) silent mode turned on. Deleting this file will turn it off."
+				"Hello, if you're reading this, that means you have Lynaria-Rewrite (Deepwoken) silent mode turned on. Deleting this file will turn it off."
 			)
 		end
 	end)
@@ -92693,9 +90440,9 @@ function LycorisTab.initCheatSettingsSection(groupbox)
 			return
 		end
 
-		shared.Lycoris.dpscanning = not shared.Lycoris.dpscanning
+		shared.Lynaria.dpscanning = not shared.Lynaria.dpscanning
 
-		if shared.Lycoris.dpscanning then
+		if shared.Lynaria.dpscanning then
 			Logger.notify("Player scanning was disabled.")
 		else
 			Logger.notify("Player scanning was enabled.")
@@ -92706,7 +90453,7 @@ function LycorisTab.initCheatSettingsSection(groupbox)
 		else
 			writefile(
 				"dpscanning.txt",
-				"Hello, if you're reading this, that means you have Lycoris-Rewrite (Deepwoken) player scanning turned off. Deleting this file will turn it on."
+				"Hello, if you're reading this, that means you have Lynaria-Rewrite (Deepwoken) player scanning turned off. Deleting this file will turn it on."
 			)
 		end
 	end)
@@ -92716,9 +90463,9 @@ function LycorisTab.initCheatSettingsSection(groupbox)
 			return
 		end
 
-		shared.Lycoris.norpc = not shared.Lycoris.norpc
+		shared.Lynaria.norpc = not shared.Lynaria.norpc
 
-		if not shared.Lycoris.norpc then
+		if not shared.Lynaria.norpc then
 			Logger.notify("Bloxstrap RPC was enabled.")
 		else
 			Logger.notify("Bloxstrap RPC was disabled.")
@@ -92729,7 +90476,7 @@ function LycorisTab.initCheatSettingsSection(groupbox)
 		else
 			writefile(
 				"norpc.txt",
-				"Hello, if you're reading this, that means you have Lycoris-Rewrite (Deepwoken) Bloxstrap RPC turned off. Deleting this file will turn it on."
+				"Hello, if you're reading this, that means you have Lynaria-Rewrite (Deepwoken) Bloxstrap RPC turned off. Deleting this file will turn it on."
 			)
 		end
 	end)
@@ -92739,9 +90486,9 @@ function LycorisTab.initCheatSettingsSection(groupbox)
 			return
 		end
 
-		shared.Lycoris.verbose = not shared.Lycoris.verbose
+		shared.Lynaria.verbose = not shared.Lynaria.verbose
 
-		if shared.Lycoris.verbose then
+		if shared.Lynaria.verbose then
 			Logger.notify("Debug logs were enabled.")
 		else
 			Logger.notify("Debug logs were disabled.")
@@ -92752,17 +90499,17 @@ function LycorisTab.initCheatSettingsSection(groupbox)
 		else
 			writefile(
 				"verbose.txt",
-				"Hello, if you're reading this, that means you have Lycoris-Rewrite (Deepwoken) debug logs turned on. Deleting this file will turn it off."
+				"Hello, if you're reading this, that means you have Lynaria-Rewrite (Deepwoken) debug logs turned on. Deleting this file will turn it off."
 			)
 		end
 	end)
 
 	groupbox:AddButton("Unload Cheat", function()
-		shared.Lycoris.detach()
+		shared.Lynaria.detach()
 	end)
 end
 
-function LycorisTab.initSpotifySection(groupbox)
+function LynariaTab.initSpotifySection(groupbox)
 	groupbox:AddButton("Copy Auth URL", function()
 		setclipboard(SpotifyClient.getAuthUrl())
 		Logger.notify("Auth URL copied. Open it in a browser, log in, click Allow, then copy the URL it redirects to (even if the page fails to load).")
@@ -92796,7 +90543,7 @@ end
 
 ---Initialize UI Settings section.
 ---@param groupbox table
-function LycorisTab.initUISettingsSection(groupbox)
+function LynariaTab.initUISettingsSection(groupbox)
 	local edgeGlowToggle = groupbox:AddToggle("EdgeGlow", {
 		Text = "Edge Glow",
 		Default = true,
@@ -92884,16 +90631,16 @@ function LycorisTab.initUISettingsSection(groupbox)
 end
 
 ---Initialize tab.
-function LycorisTab.init(window)
+function LynariaTab.init(window)
 	-- Create tab.
 	local tab = window:AddTab("Settings", "Settings", Icons.Settings) -- dont change the name, it's more confusing if its named that way
 
 	-- Initialize sections.
-	LycorisTab.initCheatSettingsSection(tab:AddLeftGroupbox("Cheat Settings"))
-	LycorisTab.initUISettingsSection(tab:AddRightGroupbox("UI Settings"))
+	LynariaTab.initCheatSettingsSection(tab:AddLeftGroupbox("Cheat Settings"))
+	LynariaTab.initUISettingsSection(tab:AddRightGroupbox("UI Settings"))
 
 	if not LPH_OBFUSCATED then
-		LycorisTab.initSpotifySection(tab:AddDynamicGroupbox("Spotify"))
+		LynariaTab.initSpotifySection(tab:AddDynamicGroupbox("Spotify"))
 	end
 
 	-- Configure SaveManager & ThemeManager.
@@ -92901,8 +90648,8 @@ function LycorisTab.init(window)
 	SaveManager:BuildConfigSection(tab)
 end
 
--- Return LycorisTab module.
-return LycorisTab
+-- Return LynariaTab module.
+return LynariaTab
 
 end)
 __bundle_register("GUI/SpotifyWidget", function(require, _LOADED, __bundle_register, __bundle_modules)
@@ -92915,7 +90662,7 @@ local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local Mouse = Players.LocalPlayer:GetMouse()
 
-local artStorage = Filesystem.new("Lycoris/Spotify/Art")
+local artStorage = Filesystem.new("Lynaria/Spotify/Art")
 local artCache = {}
 
 local POLL_INTERVAL = 2
@@ -93318,7 +91065,7 @@ local JSON = require("Utility/JSON")
 local Filesystem = require("Utility/Filesystem")
 local Logger = require("Utility/Logger")
 
-local storage = Filesystem.new("Lycoris/Spotify")
+local storage = Filesystem.new("Lynaria/Spotify")
 
 local DEBUG = false
 local function dbg(fmt, ...)
@@ -93746,7 +91493,7 @@ return LPH_NO_VIRTUALIZE(function()
 
 	local SaveManager = {}
 	do
-		SaveManager.Folder = "Lycoris-Rewrite-Configs"
+		SaveManager.Folder = "Lynaria-Rewrite-Configs"
 		SaveManager.Ignore = {}
 		SaveManager.Parser = {
 			Toggle = {
@@ -94129,7 +91876,7 @@ return LPH_NO_VIRTUALIZE(function()
 	local httpService = game:GetService("HttpService")
 	local ThemeManager = {}
 	do
-		ThemeManager.Folder = "Lycoris-Rewrite-Themes"
+		ThemeManager.Folder = "Lynaria-Rewrite-Themes"
 		ThemeManager.Library = nil
 		ThemeManager.BuiltInThemes = {
 			["Default"] = {
@@ -95775,9 +93522,6 @@ local KeyHandling = require("Game/KeyHandling")
 ---@module Features.Game.Tweening
 local Tweening = require("Features/Game/Tweening")
 
----@module Features.Automation.AutoFerryman
-local AutoFerryman = require("Features/Automation/AutoFerryman")
-
 ---Attribute section.
 ---@param groupbox table
 function AutomationTab.initAttributeSection(groupbox)
@@ -95944,17 +93688,6 @@ function AutomationTab.initAutoLootSection(groupbox)
 	})
 end
 
----@param groupbox table
-function AutomationTab.initAutoFerrymanSection(groupbox)
-	groupbox:AddButton({
-		Text = "Start",
-		DoubleClick = true,
-		Func = function()
-			AutoFerryman.start()
-		end,
-	})
-end
-
 ---Initialize debugging section.
 ---@param groupbox table
 function AutomationTab.initDebuggingSection(groupbox)
@@ -96029,7 +93762,6 @@ function AutomationTab.init(window)
 	AutomationTab.initFishFarmSection(tab:AddDynamicGroupbox("Fish Farm"))
 	AutomationTab.initAttributeSection(tab:AddDynamicGroupbox("Attribute Farm"))
 	AutomationTab.initEffectAutomation(tab:AddDynamicGroupbox("Effect Automation"))
-	AutomationTab.initAutoFerrymanSection(tab:AddDynamicGroupbox("Auto Ferryman"))
 	AutomationTab.initAutoLootSection(tab:AddDynamicGroupbox("Auto Loot"))
 
 	if LRM_UserNote then
@@ -96103,7 +93835,7 @@ function GameTab.initLocalCharacterSection(groupbox)
 
 	groupbox:AddToggle("SafeMode", {
 		Text = "Safe Mode",
-		Tooltip = "Limits flying to 100 studs above your height when enabled.",
+		Tooltip = "Caps total flying speed at 100 studs per second when enabled.",
 		Default = false,
 	})
 
@@ -98129,33 +95861,6 @@ function CombatTab.initApBreakerSection(groupbox)
 
 	apbbreaker:AddKeyPicker("APBreakerKeybind", { Default = "N/A", SyncToggleState = true, Text = "AP Breaker Keybind" })
 
-	local experimentalApBreaker = groupbox:AddToggle("ExperimentalAPBreaker", {
-		Text = "Experimental AP Breaker",
-		Default = false,
-		Tooltip = "Modifies your legit attacks to look like AP breaker pulses, bypassing enemy anti-ap breakers.",
-	})
-
-	experimentalApBreaker:AddKeyPicker("ExperimentalAPBreakerKeybind", { Default = "N/A", SyncToggleState = true, Text = "Experimental AP Breaker" })
-
-	local expApBreakerDepBox = groupbox:AddDependencyBox()
-
-	expApBreakerDepBox:AddDropdown("ExperimentalAPBreakerTags", {
-		Text = "Break On",
-		Tooltip = "Which of your own attacks get broken. Unselected tags animate completely normally.",
-		Values = {
-			"M1s",
-			"Mantras",
-			"Criticals",
-		},
-		Multi = true,
-		AllowNull = true,
-		Default = {
-			["M1s"] = true,
-			["Mantras"] = true,
-			["Criticals"] = true,
-		},
-	})
-
 	local ExpApBreaker = require("Features/Combat/ExpApBreaker")
 
 	-- Mira Breaker (the Ultimate breaker): decoy flood + idle cover + real-track boosting.
@@ -98199,9 +95904,6 @@ function CombatTab.initApBreakerSection(groupbox)
 		{ miraBreakerToggle, true },
 	})
 
-	expApBreakerDepBox:SetupDependencies({
-		{ Toggles.ExperimentalAPBreaker, true },
-	})
 end
 
 ---Initialize tab.
@@ -99657,7 +97359,7 @@ local onGetLogHistory = LPH_NO_VIRTUALIZE(function(...)
 	local result = oldGetLogHistory(...)
 
 	local blockedPatterns = {
-		"Lycoris Recode",       -- Logger.warn prefix
+		"Lynaria Recode",       -- Logger.warn prefix
 		"debug%.profileEnd%(%)", -- executor profile fingerprint
 		"getgc", "hookfunction", "hookmetamethod", -- executor API names
 		"checkcaller", "getrawmetatable",
@@ -99751,7 +97453,7 @@ local onIndex = LPH_NO_VIRTUALIZE(function(self, index, ...)
 
 	---@note: Patch out InputClient detection for __index hooking to prevent annoying errors.
 	if typeof(index) == "table" then
-		return error("InputClient - Lycoris On Top")
+		return error("InputClient - Lynaria On Top")
 	end
 
 	if Spoofing.force or not Configuration.expectToggleValue("InfoSpoofing") then
@@ -100287,7 +97989,7 @@ function Hooking.init()
 	oldKeyHandlerModule = hookfunction(
 		keyHandlerModule,
 		LPH_NO_VIRTUALIZE(function()
-			return { emulatedGetKey, emulatedCreateKey, "Lycoris On Top" }
+			return { emulatedGetKey, emulatedCreateKey, "Lynaria On Top" }
 		end)
 	)
 
@@ -100339,7 +98041,7 @@ function Hooking.init()
 	end
 
 	-- Okay, we're done.
-	if not LPH_OBFUSCATED or shared.Lycoris.verbose then
+	if not LPH_OBFUSCATED or shared.Lynaria.verbose then
 		Logger.warn("Client-side anticheat has been penetrated.")
 	end
 end
