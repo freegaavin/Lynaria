@@ -80661,6 +80661,12 @@ local LUMINANT_TARGETS = {
 
 local noClipSetByTeleport = false
 
+local function setNoFallDamage(enabled)
+	if Toggles and Toggles.NoFallDamage then
+		Toggles.NoFallDamage:SetValue(enabled)
+	end
+end
+
 ---On player GUI descendant added.
 ---@param child Instance
 local function onPlayerGuiDescendantAdded(child)
@@ -80793,6 +80799,7 @@ local function resetTeleportState()
 	streamRequestTimes = {}
 
 	restoreNoClip()
+	setNoFallDamage(false)
 end
 
 ---Request stream around a position.
@@ -81073,6 +81080,7 @@ end)
 function Teleport.Safetweenstart(target_cframe, speed)
     Teleport.Safetweenstop()
     task.wait()
+	setNoFallDamage(true)
 
 	local function internalSafeNAN(val)
         if val == val then return val end
@@ -81123,10 +81131,14 @@ function Teleport.Safetweenstart(target_cframe, speed)
         local root = character and character:FindFirstChild("HumanoidRootPart")
         
     
-        while root and (Vector2.new(travel_pos.X, travel_pos.Z) - Vector2.new(root.Position.X, root.Position.Z)).Magnitude > 15 do
+        while conn and root and (Vector2.new(travel_pos.X, travel_pos.Z) - Vector2.new(root.Position.X, root.Position.Z)).Magnitude > 15 do
             task.wait()
             root = character and character:FindFirstChild("HumanoidRootPart")
         end
+
+		if not conn then
+			return
+		end
 
         if root and conn then
             root.CFrame = target_cframe
@@ -81136,6 +81148,9 @@ function Teleport.Safetweenstart(target_cframe, speed)
             conn:Disconnect()
             conn = nil
         end
+
+		setNoFallDamage(false)
+		Teleport.activeTween = nil
     end)
 
     Teleport.activeTween = {
@@ -81144,6 +81159,8 @@ function Teleport.Safetweenstart(target_cframe, speed)
                 conn:Disconnect()
                 conn = nil
             end
+
+			setNoFallDamage(false)
             
             local character = players.LocalPlayer.Character
             local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -81168,8 +81185,10 @@ function Teleport.start(destination)
 		return error("Destination must be provided for teleporting.")
 	end
 
+	Teleport.Safetweenstop()
 	resetTeleportState()
 	Teleport.destination = destination
+	setNoFallDamage(true)
 end
 
 ---Stop teleport module.
@@ -81191,6 +81210,7 @@ end
 
 ---Detach Teleport module.
 function Teleport.detach()
+	Teleport.stop()
 	Teleport.Safetweenstop()
 	tmaid:clean()
 end
@@ -92478,7 +92498,10 @@ function ExploitTab.initTeleportsSection(tabbox)
 	addTeleportButton(teleportsTab, "Teleport to Depths", "Depths")
 	addTeleportButton(teleportsTab, "Teleport to Voidheart", "Voidheart")
 
-	teleportsTab:AddButton("Stop Teleporting", Teleport.stop and Teleport.Safetweenstop)
+	teleportsTab:AddButton("Stop Teleporting", function()
+		Teleport.stop()
+		Teleport.Safetweenstop()
+	end)
 
 	guildDoorTab:AddInput("GuildDoorName", {
 		Text = "Guild Door Name",
