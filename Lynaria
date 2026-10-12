@@ -77608,6 +77608,95 @@ function AnimatorDefender:apProcess(track, occurrence, timing, recovered)
 	self._apStampOccurrence = nil
 end
 
+---@param self AnimatorDefender
+---@param track AnimationTrack
+-- ============================================================================
+-- Offensive Experimental AP Breaker (ported from maintainedlyc): makes OUR OWN
+-- attacks harder to parry. Independent of the defensive anti-breaker (IngressGuard).
+-- ============================================================================
+local APB_BREAK_CUT = 0.15
+local APB_BREAK_FADE = 9
+local APB_BREAK_CLEANUP_DELAY = 1.2
+
+local APB_BREAK_TAGS = {
+	["M1"] = "M1s",
+	["Mantra"] = "Mantras",
+	["Critical"] = "Criticals",
+}
+
+---@param timing AnimationTiming
+---@return boolean
+local function apbBreakOnTag(timing)
+	local selected = Configuration.expectOptionValue("ExperimentalAPBreakerTags")
+	if type(selected) ~= "table" then
+		return false
+	end
+
+	local display = APB_BREAK_TAGS[timing.tag]
+	if not display then
+		return false
+	end
+
+	return selected[display] == true
+end
+
+---@param self AnimatorDefender
+---@param track AnimationTrack
+---@param timing AnimationTiming
+function AnimatorDefender:_breakOwnAnimation(track, timing)
+	if not Configuration.expectToggleValue("ExperimentalAPBreaker") then
+		return
+	end
+
+	if not apbBreakOnTag(timing) then
+		return
+	end
+
+	if track.Looped then
+		return
+	end
+
+	local speed = track.Speed
+	if speed <= 0 or track.Length <= 0 then
+		return
+	end
+
+	local duration = track.Length / speed
+
+	TaskSpawner.spawn("ExperimentalAPBreaker_Break", function()
+		local untilCut = duration * APB_BREAK_CUT
+		if untilCut > 0 then
+			task.wait(untilCut)
+		end
+
+		if not track.IsPlaying or math.abs(track.Speed) < 0.05 then
+			return
+		end
+
+		track.Priority = Enum.AnimationPriority.Action
+		local followThrough = duration * (1 - APB_BREAK_CUT)
+		track:Stop(followThrough * APB_BREAK_FADE)
+
+		local remaining = followThrough - Latency.sdelay()
+		if remaining > 0 then
+			task.wait(remaining)
+		end
+
+		if track.IsPlaying and math.abs(track.Speed) > 0.05 then
+			return
+		end
+
+		track.TimePosition = track.Length
+		track:Play(0.1, 0, 0)
+
+		task.wait(APB_BREAK_CLEANUP_DELAY)
+
+		if track.IsPlaying then
+			track:Stop(0)
+		end
+	end)
+end
+
 AnimatorDefender.process = LPH_NO_VIRTUALIZE(function(self, track)
 	if canonicalAid(track.Animation and track.Animation.AnimationId) == HIT_REACTION_ANIMATION_ID then
 		task.spawn(function()
@@ -77643,6 +77732,12 @@ AnimatorDefender.process = LPH_NO_VIRTUALIZE(function(self, track)
 
 	if isLocalPlayer then
 		self:asc(track)
+
+		local aid = tostring(track.Animation.AnimationId)
+		local timing = self:initial(self.entity, SaveManager.as, self.entity.Name, aid)
+		if timing then
+			self:_breakOwnAnimation(track, timing)
+		end
 
 		return
 	end
@@ -89507,6 +89602,8 @@ local function obfuscate_anim_id(id)
     return made
 end
 
+---@note: The experimental AP breaker now lives in Game/Hooking.lua as a dedicated animation hook.
+
 	---Update speed hack.
 	---@param rootPart BasePart
 	---@param humanoid Humanoid
@@ -93818,6 +93915,45 @@ function AutomationTab.init(window)
 	AutomationTab.initEffectAutomation(tab:AddDynamicGroupbox("Effect Automation"))
 	AutomationTab.initAutoLootSection(tab:AddDynamicGroupbox("Auto Loot"))
 
+	local combatGroupbox = tab:AddDynamicGroupbox("Combat")
+	combatGroupbox:AddToggle("AutoRollCancel", {
+		Text = "Auto Roll Cancel",
+		Default = false,
+		Tooltip = "Automatically right-click shortly after pressing Q to cancel the roll.",
+	})
+
+	local userInputService = game:GetService("UserInputService")
+	userInputService.InputBegan:Connect(function(input)
+		if
+			input.KeyCode ~= Enum.KeyCode.Q
+			or not Toggles
+			or not Toggles.AutoRollCancel
+			or not Toggles.AutoRollCancel.Value
+			or userInputService:GetFocusedTextBox()
+		then
+			return
+		end
+
+		task.delay(0.01, function()
+			if not Toggles or not Toggles.AutoRollCancel or not Toggles.AutoRollCancel.Value then
+				return
+			end
+
+			if type(mouse2press) == "function" and type(mouse2release) == "function" then
+				mouse2press()
+				task.delay(0.05, mouse2release)
+				return
+			end
+
+			if type(keypress) == "function" and type(keyrelease) == "function" then
+				keypress(0x02)
+				task.delay(0.05, function()
+					keyrelease(0x02)
+				end)
+			end
+		end)
+	end)
+
 	if LRM_UserNote then
 		return
 	end
@@ -94235,11 +94371,7 @@ function GameTab.initSafetySection(groupbox)
 		Tooltip = "Disables all movement exploits when in Chime.",
 		Default = false,
 		Callback = function(enabled)
-			if not enabled then
-				return
-			end
-
-			if game.PlaceId ~= 12559711136 then
+			if not enabled or game.PlaceId ~= 12559711136 then
 				return
 			end
 
@@ -96016,6 +96148,33 @@ function CombatTab.initApBreakerSection(groupbox)
 
 	apbbreaker:AddKeyPicker("APBreakerKeybind", { Default = "N/A", SyncToggleState = true, Text = "AP Breaker Keybind" })
 
+	local experimentalApBreaker = groupbox:AddToggle("ExperimentalAPBreaker", {
+		Text = "Experimental AP Breaker",
+		Default = false,
+		Tooltip = "Modifies your legit attacks to look like AP breaker pulses, bypassing enemy anti-ap breakers.",
+	})
+
+	experimentalApBreaker:AddKeyPicker("ExperimentalAPBreakerKeybind", { Default = "N/A", SyncToggleState = true, Text = "Experimental AP Breaker" })
+
+	local expApBreakerDepBox = groupbox:AddDependencyBox()
+
+	expApBreakerDepBox:AddDropdown("ExperimentalAPBreakerTags", {
+		Text = "Break On",
+		Tooltip = "Which of your own attacks get broken. Unselected tags animate completely normally.",
+		Values = {
+			"M1s",
+			"Mantras",
+			"Criticals",
+		},
+		Multi = true,
+		AllowNull = true,
+		Default = {
+			["M1s"] = true,
+			["Mantras"] = true,
+			["Criticals"] = true,
+		},
+	})
+
 	local ExpApBreaker = require("Features/Combat/ExpApBreaker")
 
 	-- Mira Breaker (the Ultimate breaker): decoy flood + idle cover + real-track boosting.
@@ -96059,6 +96218,9 @@ function CombatTab.initApBreakerSection(groupbox)
 		{ miraBreakerToggle, true },
 	})
 
+	expApBreakerDepBox:SetupDependencies({
+		{ Toggles.ExperimentalAPBreaker, true },
+	})
 end
 
 ---Initialize tab.
