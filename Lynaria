@@ -77877,6 +77877,8 @@ function AnimatorDefender:_cancelFeintedTrack(reason, expectedTrack)
 	if
 		not self.track
 		or (expectedTrack and expectedTrack ~= self.track)
+		-- A successful React To Feints roll means keep defending through explicit cue sounds.
+		or not self._respectFeint
 		-- NOTE: do NOT require self.track to still be in GetPlayingAnimationTracks() here.
 		-- A feint STOPS the attack track, so by the time the feint sound's Playing flips true the
 		-- track has already left the playing set -- gating on that is what made react-to-feints
