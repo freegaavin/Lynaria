@@ -93915,6 +93915,45 @@ function AutomationTab.init(window)
 	AutomationTab.initEffectAutomation(tab:AddDynamicGroupbox("Effect Automation"))
 	AutomationTab.initAutoLootSection(tab:AddDynamicGroupbox("Auto Loot"))
 
+	local combatGroupbox = tab:AddDynamicGroupbox("Combat")
+	combatGroupbox:AddToggle("AutoRollCancel", {
+		Text = "Auto Roll Cancel",
+		Default = false,
+		Tooltip = "Automatically right-click shortly after pressing Q to cancel the roll.",
+	})
+
+	local userInputService = game:GetService("UserInputService")
+	userInputService.InputBegan:Connect(function(input)
+		if
+			input.KeyCode ~= Enum.KeyCode.Q
+			or not Toggles
+			or not Toggles.AutoRollCancel
+			or not Toggles.AutoRollCancel.Value
+			or userInputService:GetFocusedTextBox()
+		then
+			return
+		end
+
+		task.delay(0.01, function()
+			if not Toggles or not Toggles.AutoRollCancel or not Toggles.AutoRollCancel.Value then
+				return
+			end
+
+			if type(mouse2press) == "function" and type(mouse2release) == "function" then
+				mouse2press()
+				task.delay(0.05, mouse2release)
+				return
+			end
+
+			if type(keypress) == "function" and type(keyrelease) == "function" then
+				keypress(0x02)
+				task.delay(0.05, function()
+					keyrelease(0x02)
+				end)
+			end
+		end)
+	end)
+
 	if LRM_UserNote then
 		return
 	end
