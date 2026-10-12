@@ -80385,6 +80385,10 @@ return LPH_NO_VIRTUALIZE(function()
 		task.spawn(function()
 			local count = 0
 			for _, obj in next, game:GetDescendants() do
+				if not ranVisuals then
+					break
+				end
+
 				downgradeObject(obj)
 				count = count + 1
 				-- Yield every 1000 objects to prevent freezing.
@@ -80392,8 +80396,18 @@ return LPH_NO_VIRTUALIZE(function()
 					task.wait()
 				end
 			end
-			Logger.notify("Aggressively optimized %d objects.", count)
+			Logger.notify("Optimize Game V2 processed %d objects.", count)
 		end)
+	end
+
+	---Stop optimizing newly spawned objects without restoring changes already applied.
+	function OptimizeGame.stopAggressive()
+		if not ranVisuals then
+			return
+		end
+
+		ranVisuals = false
+		Logger.notify("Optimize Game V2 stopped. Already optimized objects stay low-detail until rejoin.")
 	end
 
 	---SeaClient optimization.
@@ -89808,7 +89822,7 @@ end
 			cachedTarget = nil
 		end
 
-		if Configuration.expectToggleValue("AgilitySpoof") then
+		if Configuration.expectToggleValue("AgilitySpoof") and not safeModeEnabled then
 			updateAgilitySpoofer(character)
 		else
 			agilitySpoofer:restore()
@@ -89845,7 +89859,7 @@ end
 			updateBoatfly(rootPart, humanoid)
 		end
 
-		if Configuration.expectToggleValue("Speedhack") then
+		if Configuration.expectToggleValue("Speedhack") and not safeModeEnabled then
 			updateSpeedHack(rootPart, humanoid)
 		end
 
@@ -92521,6 +92535,9 @@ local JSON = require("Utility/JSON")
 ---@module Features.Visuals.Objects.BuilderData
 local BuilderData = require("Features/Visuals/Objects/BuilderData")
 
+---@module Features.Game.OptimizeGame
+local OptimizeGame = require("Features/Game/OptimizeGame")
+
 -- Visuals tab.
 local VisualsTab = {}
 
@@ -92618,6 +92635,20 @@ function VisualsTab.initWorldVisualsSection(groupbox)
 		Text = "Optimize Game",
 		Default = false,
 	})
+
+	local optimizeGameV2Toggle = groupbox:AddToggle("OptimizeGameV2", {
+		Text = "Optimize Game V2",
+		Tooltip = "Aggressively simplifies existing and newly spawned visuals. Changes already applied remain until you rejoin.",
+		Default = false,
+	})
+
+	optimizeGameV2Toggle:OnChanged(function(state)
+		if state then
+			OptimizeGame.runAggressive()
+		else
+			OptimizeGame.stopAggressive()
+		end
+	end)
 
 	groupbox:AddToggle("UseFastFlags", {
 		Text = "Use Fast Flags For Session",
@@ -93930,12 +93961,6 @@ function GameTab.initLocalCharacterSection(groupbox)
 
 	flyToggle:AddKeyPicker("FlyKeybind", { Default = "N/A", SyncToggleState = true, Text = "Fly" })
 
-	groupbox:AddToggle("SafeMode", {
-		Text = "Safe Mode",
-		Tooltip = "Caps total flying speed at 100 studs per second when enabled.",
-		Default = false,
-	})
-
 	local flyDepBox = groupbox:AddDependencyBox()
 
 	flyDepBox:AddSlider("FlySpeed", {
@@ -94268,6 +94293,45 @@ function GameTab.initLocalCharacterSection(groupbox)
 		{ Toggles.TweenToBack, true },
 	})
 
+end
+
+---Initialize safety section.
+---@param groupbox table
+function GameTab.initSafetySection(groupbox)
+	groupbox:AddToggle("SafeMode", {
+		Text = "Safe Mode",
+		Tooltip = "Caps flying speed at 100 studs per second and disables Speedhack, Agility Spoofer, and Walkspeed Multiplier.",
+		Default = false,
+	})
+
+	groupbox:AddToggle("ChimeSafeMode", {
+		Text = "Chime Safe Mode",
+		Tooltip = "Disables all movement exploits when in Chime.",
+		Default = false,
+		Callback = function(enabled)
+			if not enabled or game.PlaceId ~= 12559711136 then
+				return
+			end
+
+			for _, toggleName in ipairs({
+				"Fly",
+				"Speedhack",
+				"WalkSpeedMultiplier",
+				"AgilitySpoof",
+				"NoClip",
+				"TweenToBack",
+				"InfiniteJump",
+				"MaxMomentumSpoof",
+			}) do
+				local toggle = Toggles[toggleName]
+				if toggle and toggle.Value then
+					toggle:SetValue(false)
+				end
+			end
+
+			Tweening.stop("TweenToBack")
+		end,
+	})
 end
 
 ---Initialize reveal animations section.
@@ -94735,6 +94799,7 @@ function GameTab.init(window)
 	-- Initialize sections.
 	GameTab.initDebuggingSection(tab:AddDynamicGroupbox("Debugging"))
 	GameTab.initLocalCharacterSection(tab:AddDynamicGroupbox("Local Character"))
+	GameTab.initSafetySection(tab:AddDynamicGroupbox("Safety"))
 	GameTab.initRevealAnimationsSection(tab:AddDynamicGroupbox("Reveal AP Breaker Animations"))
 	GameTab.initEffectRemovalsSection(tab:AddDynamicGroupbox("Effect Removals"))
 	GameTab.initInstanceRemovalsSection(tab:AddDynamicGroupbox("Instance Removals"))
@@ -94894,6 +94959,69 @@ function CombatTab.initCombatWhitelistSection(groupbox)
 		usernameList:Display()
 
 	end)
+end
+
+-- Initialize silent aim section.
+---@param tab table
+function CombatTab.initSilentAimSection(tab)
+	tab:AddToggle("SilentAimEnabled", {
+		Text = "Enable Silent Aim",
+		Default = false,
+	})
+
+	local fovSlider = tab:AddSlider("SilentAimFOV", {
+		Text = "FOV Radius",
+		Default = 180,
+		Min = 0,
+		Max = 180,
+		Suffix = "px",
+		Rounding = 0,
+	})
+
+	tab:AddToggle("SilentAimPrediction", {
+		Text = "Use Prediction",
+		Default = false,
+	})
+
+	local showFOVCircleToggle = tab:AddToggle("SilentAimShowFOVCircle", {
+		Text = "Show FOV Circle",
+		Default = false,
+	})
+
+	local userInputService = game:GetService("UserInputService")
+	local guiService = game:GetService("GuiService")
+	local runService = game:GetService("RunService")
+	local fovCircle = Library:Create("Frame", {
+		Name = "SilentAimFOVCircle",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Visible = false,
+		ZIndex = 1000,
+		Parent = Library.ScreenGui,
+	})
+	Library:Create("UICorner", {
+		CornerRadius = UDim.new(1, 0),
+		Parent = fovCircle,
+	})
+	Library:Create("UIStroke", {
+		Color = Library.AccentColor,
+		Thickness = 1,
+		Parent = fovCircle,
+	})
+
+	Library:GiveSignal(runService.RenderStepped:Connect(function()
+		local shouldShow = showFOVCircleToggle.Value
+		fovCircle.Visible = shouldShow
+		if not shouldShow then
+			return
+		end
+
+		local radius = fovSlider.Value
+		local mousePosition = userInputService:GetMouseLocation() - guiService:GetGuiInset()
+		fovCircle.Size = UDim2.fromOffset(radius * 2, radius * 2)
+		fovCircle.Position = UDim2.fromOffset(mousePosition.X, mousePosition.Y)
+	end))
 end
 
 -- Initialize auto defense section.
@@ -96045,6 +96173,7 @@ function CombatTab.init(window)
 	local tabbox = tab:AddDynamicTabbox()
 	CombatTab.initCombatTargetingSection(tabbox:AddTab("Targeting"))
 	CombatTab.initCombatWhitelistSection(tabbox:AddTab("Whitelisting"))
+	CombatTab.initSilentAimSection(tabbox:AddTab("Silent Aim"))
 
 	-- Initialize other sections.
 	CombatTab.initAttackAssistanceSection(tab:AddDynamicGroupbox("Attack Assistance"))
@@ -97883,7 +98012,12 @@ local onNewIndex = LPH_NO_VIRTUALIZE(function(self, index, value, ...)
 	---@note: Scale the game's own walkspeed writes for our local humanoid. Because
 	-- checkcaller() writes bailed above, only the game's writes reach here, so the
 	-- multiplied value replicates naturally instead of us setting WalkSpeed ourselves.
-	if index == "WalkSpeed" and Configuration.expectToggleValue("WalkSpeedMultiplier") and typeof(value) == "number" then
+	if
+		index == "WalkSpeed"
+		and Configuration.expectToggleValue("WalkSpeedMultiplier")
+		and not Configuration.expectToggleValue("SafeMode")
+		and typeof(value) == "number"
+	then
 		local localPlayer = playersService.LocalPlayer
 		local character = localPlayer and localPlayer.Character
 
