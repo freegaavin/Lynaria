@@ -1508,12 +1508,13 @@ return LPH_NO_VIRTUALIZE(function()
 		OverrideData = {},
 		HudRegistry = {},
 
-		FontColor = Color3.fromRGB(255, 255, 255),
-		MainColor = Color3.fromRGB(28, 28, 28),
-		BackgroundColor = Color3.fromRGB(20, 20, 20),
-		AccentColor = Color3.fromRGB(0, 85, 255),
-		OutlineColor = Color3.fromRGB(50, 50, 50),
-		RiskColor = Color3.fromRGB(255, 50, 50),
+		FontColor = Color3.fromRGB(236, 244, 255),
+		MainColor = Color3.fromRGB(15, 23, 42),
+		BackgroundColor = Color3.fromRGB(2, 6, 23),
+		AccentColor = Color3.fromRGB(94, 234, 212),
+		AccentSecondary = Color3.fromRGB(139, 92, 246),
+		OutlineColor = Color3.fromRGB(30, 41, 59),
+		RiskColor = Color3.fromRGB(255, 108, 132),
 
 		Black = Color3.new(0, 0, 0),
 		Font = Font.fromEnum(Enum.Font.Gotham),
@@ -5680,7 +5681,7 @@ return LPH_NO_VIRTUALIZE(function()
 
 		local Outer = Library:Create("Frame", {
 			AnchorPoint = Config.AnchorPoint,
-			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundColor3 = Library.BackgroundColor,
 			BorderSizePixel = 0,
 			Position = Config.Position,
 			Size = Config.Size,
@@ -5797,6 +5798,54 @@ return LPH_NO_VIRTUALIZE(function()
 		Library:AddToRegistry(WindowLabel, {
 			TextColor3 = "AccentColor",
 		})
+
+		for index, star in ipairs({
+			{ Position = 0.43, Size = 12 },
+			{ Position = 0.50, Size = 9 },
+			{ Position = 0.57, Size = 13 },
+			{ Position = 0.65, Size = 9 },
+			{ Position = 0.73, Size = 12 },
+		}) do
+			local horizontal = Library:Create("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				BackgroundColor3 = Library.AccentColor,
+				BackgroundTransparency = 0.05,
+				BorderSizePixel = 0,
+				Position = UDim2.new(star.Position, 0, 0, 12),
+				Rotation = 45,
+				Size = UDim2.fromOffset(2, star.Size),
+				ZIndex = 3,
+				Parent = Inner,
+			})
+			local vertical = Library:Create("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				BackgroundColor3 = Library.AccentColor,
+				BackgroundTransparency = 0.05,
+				BorderSizePixel = 0,
+				Position = UDim2.new(star.Position, 0, 0, 12),
+				Rotation = -45,
+				Size = UDim2.fromOffset(2, star.Size),
+				ZIndex = 3,
+				Parent = Inner,
+			})
+
+			Library:AddToRegistry(horizontal, {
+				BackgroundColor3 = "AccentColor",
+			})
+			Library:AddToRegistry(vertical, {
+				BackgroundColor3 = "AccentColor",
+			})
+
+			local rotationTweenInfo = TweenInfo.new(
+				2.5 + index * 0.3,
+				Enum.EasingStyle.Sine,
+				Enum.EasingDirection.InOut,
+				-1,
+				true
+			)
+			TweenService:Create(horizontal, rotationTweenInfo, { Rotation = 135 }):Play()
+			TweenService:Create(vertical, rotationTweenInfo, { Rotation = 45 }):Play()
+		end
 
 		do
 			local SearchOuter = Library:Create("Frame", {
@@ -6659,17 +6708,17 @@ return LPH_NO_VIRTUALIZE(function()
 			Parent = ScreenGui,
 		})
 
-		local TransparencyCache = {}
 		local Fading = false
-		local FirstTime = false
+		local LastOpenPosition = Outer.Position
+		local LastOpenSize = Outer.Size
 
 		function Library:Toggle()
 			if Fading then
 				return
 			end
 
-			local FadeTime = Config.MenuFadeTime
-			local ShouldFade = FadeTime > 0.01
+			local AnimationTime = Config.MenuFadeTime
+			local ShouldAnimate = AnimationTime > 0.01
 
 			Fading = true
 
@@ -6677,6 +6726,18 @@ return LPH_NO_VIRTUALIZE(function()
 			ModalElement.Modal = Toggled
 
 			if Toggled then
+				Outer.Position = UDim2.new(
+					LastOpenPosition.X.Scale,
+					LastOpenPosition.X.Offset,
+					LastOpenPosition.Y.Scale,
+					LastOpenPosition.Y.Offset + 12
+				)
+				Outer.Size = UDim2.new(
+					LastOpenSize.X.Scale * 0.96,
+					LastOpenSize.X.Offset * 0.96,
+					LastOpenSize.Y.Scale * 0.96,
+					LastOpenSize.Y.Offset * 0.96
+				)
 				Outer.Visible = true
 			end
 
@@ -6698,48 +6759,47 @@ return LPH_NO_VIRTUALIZE(function()
 				end
 			end
 
-			if ShouldFade then
-				for _, Desc in next, Outer:GetDescendants() do
-					local Properties = {}
+			if ShouldAnimate then
+				local targetPosition
+				local targetSize
+				local tweenInfo
 
-					if Desc:IsA("ImageLabel") then
-						table.insert(Properties, "ImageTransparency")
-						table.insert(Properties, "BackgroundTransparency")
-					elseif Desc:IsA("TextLabel") or Desc:IsA("TextBox") then
-						table.insert(Properties, "TextTransparency")
-					elseif Desc:IsA("Frame") or Desc:IsA("ScrollingFrame") then
-						table.insert(Properties, "BackgroundTransparency")
-					elseif Desc:IsA("UIStroke") then
-						table.insert(Properties, "Transparency")
-					end
-
-					local Cache = TransparencyCache[Desc]
-
-					if not Cache then
-						Cache = {}
-						TransparencyCache[Desc] = Cache
-					end
-
-					for _, Prop in next, Properties do
-						if not Cache[Prop] then
-							Cache[Prop] = Desc[Prop]
-						end
-
-						if Cache[Prop] == 1 then
-							continue
-						end
-
-						TweenService:Create(
-							Desc,
-							TweenInfo.new(FadeTime, Enum.EasingStyle.Linear),
-							{ [Prop] = Toggled and Cache[Prop] or 1 }
-						):Play()
-					end
+				if Toggled then
+					targetPosition = LastOpenPosition
+					targetSize = LastOpenSize
+					tweenInfo = TweenInfo.new(
+						AnimationTime,
+						Enum.EasingStyle.Back,
+						Enum.EasingDirection.Out
+					)
+				else
+					LastOpenPosition = Outer.Position
+					LastOpenSize = Outer.Size
+					targetPosition = UDim2.new(
+						Outer.Position.X.Scale,
+						Outer.Position.X.Offset + 8,
+						Outer.Position.Y.Scale,
+						Outer.Position.Y.Offset + 8
+					)
+					targetSize = UDim2.new(
+						Outer.Size.X.Scale * 0.96,
+						Outer.Size.X.Offset * 0.96,
+						Outer.Size.Y.Scale * 0.96,
+						Outer.Size.Y.Offset * 0.96
+					)
+					tweenInfo = TweenInfo.new(
+						AnimationTime * 0.75,
+						Enum.EasingStyle.Quad,
+						Enum.EasingDirection.In
+					)
 				end
 
-				task.wait(FadeTime)
-
-				FirstTime = true
+				local tween = TweenService:Create(Outer, tweenInfo, {
+					Position = targetPosition,
+					Size = targetSize,
+				})
+				tween:Play()
+				tween.Completed:Wait()
 			end
 
 			Outer.Visible = Toggled
@@ -90336,11 +90396,11 @@ local renderStepped = Signal.new(runService.RenderStepped)
 local menuMaid = Maid.new()
 
 -- Constants.
-local MENU_TITLE = "Lynaria Rewrite | Deepwoken"
+local MENU_TITLE = "Lynaria | Deepwoken"
 
 if LRM_UserNote then
 	MENU_TITLE = string.format(
-		"Lynaria Rewrite | Deepwoken",
+		"Lynaria | Deepwoken",
 		string.sub("6c10af8d79e3dc253ba6db7f343613361c37e378", 1, 6)
 	)
 end
@@ -90353,13 +90413,14 @@ function Menu.init()
 		Center = true,
 		AutoShow = not shared.Lynaria.silent,
 		TabPadding = 8,
-		MenuFadeTime = 0.0,
+		MenuFadeTime = 0.24,
 		Size = UDim2.fromOffset(780, 600),
 	})
 
 	-- Configure ThemeManager.
 	ThemeManager:SetLibrary(Library)
 	ThemeManager:SetFolder("Lynaria-Rewrite-Themes")
+	ThemeManager:ApplyTheme("Neon Night")
 
 	-- Configure SaveManager.
 	SaveManager:SetLibrary(Library)
@@ -92025,59 +92086,65 @@ return LPH_NO_VIRTUALIZE(function()
 			["Default"] = {
 				1,
 				httpService:JSONDecode(
-					'{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"0055ff","BackgroundColor":"141414","OutlineColor":"323232"}'
+					'{"FontColor":"ecf4ff","MainColor":"111827","AccentColor":"8b5cf6","BackgroundColor":"020617","OutlineColor":"334155"}'
+				),
+			},
+			["Neon Night"] = {
+				2,
+				httpService:JSONDecode(
+					'{"FontColor":"ecf4ff","MainColor":"111827","AccentColor":"8b5cf6","BackgroundColor":"020617","OutlineColor":"334155"}'
 				),
 			},
 			["BBot"] = {
-				2,
+				3,
 				httpService:JSONDecode(
 					'{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}'
 				),
 			},
 			["Fatality"] = {
-				3,
+				4,
 				httpService:JSONDecode(
 					'{"FontColor":"ffffff","MainColor":"1e1842","AccentColor":"c50754","BackgroundColor":"191335","OutlineColor":"3c355d"}'
 				),
 			},
 			["Jester"] = {
-				4,
+				5,
 				httpService:JSONDecode(
 					'{"FontColor":"ffffff","MainColor":"242424","AccentColor":"db4467","BackgroundColor":"1c1c1c","OutlineColor":"373737"}'
 				),
 			},
 			["Mint"] = {
-				5,
+				6,
 				httpService:JSONDecode(
 					'{"FontColor":"ffffff","MainColor":"242424","AccentColor":"3db488","BackgroundColor":"1c1c1c","OutlineColor":"373737"}'
 				),
 			},
 			["Tokyo Night"] = {
-				6,
+				7,
 				httpService:JSONDecode(
 					'{"FontColor":"ffffff","MainColor":"191925","AccentColor":"6759b3","BackgroundColor":"16161f","OutlineColor":"323232"}'
 				),
 			},
 			["Ubuntu"] = {
-				7,
+				8,
 				httpService:JSONDecode(
 					'{"FontColor":"ffffff","MainColor":"3e3e3e","AccentColor":"e2581e","BackgroundColor":"323232","OutlineColor":"191919"}'
 				),
 			},
 			["Quartz"] = {
-				8,
+				9,
 				httpService:JSONDecode(
 					'{"FontColor":"ffffff","MainColor":"232330","AccentColor":"426e87","BackgroundColor":"1d1b26","OutlineColor":"27232f"}'
 				),
 			},
 			["Matte Black"] = {
-				9,
+				10,
 				httpService:JSONDecode(
 					'{"FontColor":"e6e6e6","MainColor":"121212","AccentColor":"4a4a4a","BackgroundColor":"0a0a0a","OutlineColor":"1f1f1f"}'
 				),
 			},
 			["Intellect"] = {
-				10,
+				11,
 				httpService:JSONDecode(
 					'{"FontColor":"ffffff","MainColor":"141414","AccentColor":"e0263f","BackgroundColor":"0b0b0b","OutlineColor":"242424"}'
 				),
@@ -92127,7 +92194,7 @@ return LPH_NO_VIRTUALIZE(function()
 		end
 
 		function ThemeManager:LoadDefault()
-			local theme = "Default"
+			local theme = "Neon Night"
 			local content = isfile(self.Folder .. "/default.txt") and readfile(self.Folder .. "/default.txt")
 
 			local isDefault = true
