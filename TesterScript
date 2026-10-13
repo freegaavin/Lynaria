@@ -1529,9 +1529,14 @@ return LPH_NO_VIRTUALIZE(function()
 
 	local RainbowStep = 0
 	local Hue = 0
+	local LastHueCache = nil
+	local CachedRainbowColor = nil
 	local RainbowColorPickers = {}
 	-- Maintain iteration state so we fairly round-robin update rainbow color pickers
 	local RainbowIteratorKey = nil
+	local CachedPlayerGui = nil
+	local CachedCursorGui = nil
+	local CachedCursor = nil
 
 	table.insert(
 		Library.Signals,
@@ -1565,7 +1570,11 @@ return LPH_NO_VIRTUALIZE(function()
 				end
 
 				Library.CurrentRainbowHue = Hue
-				Library.CurrentRainbowColor = Color3.fromHSV(Hue, 0.8, 1)
+				if Hue ~= LastHueCache then
+					CachedRainbowColor = Color3.fromHSV(Hue, 0.8, 1)
+					LastHueCache = Hue
+				end
+				Library.CurrentRainbowColor = CachedRainbowColor
 
 				-- Ensure iterator key is valid; if the last key was removed, restart
 				if RainbowIteratorKey ~= nil and RainbowColorPickers[RainbowIteratorKey] == nil then
@@ -1589,8 +1598,12 @@ return LPH_NO_VIRTUALIZE(function()
 			end
 
 			local PlayerGui = LocalPlayer and LocalPlayer.PlayerGui
-			local CursorGui = PlayerGui and PlayerGui:FindFirstChild("CursorGui")
-			local Cursor = CursorGui and CursorGui:FindFirstChild("Cursor")
+			if PlayerGui ~= CachedPlayerGui then
+				CachedPlayerGui = PlayerGui
+				CachedCursorGui = PlayerGui and PlayerGui:FindFirstChild("CursorGui") or nil
+				CachedCursor = CachedCursorGui and CachedCursorGui:FindFirstChild("Cursor") or nil
+			end
+			local Cursor = CachedCursor
 
 			if Cursor then
 				Cursor.Visible = false
@@ -5725,9 +5738,21 @@ return LPH_NO_VIRTUALIZE(function()
 
 		local BreatheStep = 0
 		local GlowShown = false
+		local CachedEdgeGlowEnabled = false
+		local CachedEdgeGlowColor = nil
+		local CachedEdgeGlowSize = 60
+		local CachedEdgeGlowOpacity = 1
+		local CachedEdgeGlowBreathe = false
 		Library:GiveSignal(RunService.RenderStepped:Connect(function(deltaTime)
 			local enabled = Toggles and Toggles.EdgeGlow and Toggles.EdgeGlow.Value or false
-			if not enabled then
+			if enabled ~= CachedEdgeGlowEnabled or Toggles and Toggles.EdgeGlow and Toggles.EdgeGlow.Value then
+				CachedEdgeGlowEnabled = enabled
+				CachedEdgeGlowColor = Options and Options.EdgeGlowColor and Options.EdgeGlowColor.Value or Library.AccentColor
+				CachedEdgeGlowSize = Options and Options.EdgeGlowSize and Options.EdgeGlowSize.Value or 60
+				CachedEdgeGlowOpacity = Options and Options.EdgeGlowOpacity and Options.EdgeGlowOpacity.Value / 100 or 1
+				CachedEdgeGlowBreathe = Toggles and Toggles.EdgeGlowBreathe and Toggles.EdgeGlowBreathe.Value or false
+			end
+			if not CachedEdgeGlowEnabled then
 				if GlowShown then
 					for _, layer in ipairs(GlowLayers) do
 						layer.Visible = false
@@ -5739,10 +5764,10 @@ return LPH_NO_VIRTUALIZE(function()
 
 			GlowShown = true
 
-			local color = Options and Options.EdgeGlowColor and Options.EdgeGlowColor.Value or Library.AccentColor
-			local maxSize = Options and Options.EdgeGlowSize and Options.EdgeGlowSize.Value or 60
-			local opacity = Options and Options.EdgeGlowOpacity and Options.EdgeGlowOpacity.Value / 100 or 1
-			local breathe = Toggles and Toggles.EdgeGlowBreathe and Toggles.EdgeGlowBreathe.Value or false
+			local color = CachedEdgeGlowColor
+			local maxSize = CachedEdgeGlowSize
+			local opacity = CachedEdgeGlowOpacity
+			local breathe = CachedEdgeGlowBreathe
 
 			local currentSize = maxSize
 			local currentOpacity = opacity
@@ -83140,6 +83165,8 @@ local function startFloodMode(character, fadeTime, monsterFlood)
 	local accumulator = 0
 	local cursor = 0
 	local nextInterval = nil
+	local cachedFloodIntensity = 8
+	local lastFloodIntensityCheck = nil
 	local connection
 	connection = RunService.RenderStepped:Connect(function(deltaTime)
 		if not running then
@@ -83152,7 +83179,13 @@ local function startFloodMode(character, fadeTime, monsterFlood)
 		if #tracks == 0 then
 			return
 		end
-		local baseInterval = 1 / math.max(1, getOption("TestBreakerFloodIntensity", 8))
+		lastFloodIntensityCheck = lastFloodIntensityCheck or 0
+		lastFloodIntensityCheck = lastFloodIntensityCheck + deltaTime
+		if lastFloodIntensityCheck >= 0.1 then
+			cachedFloodIntensity = getOption("TestBreakerFloodIntensity", 8)
+			lastFloodIntensityCheck = 0
+		end
+		local baseInterval = 1 / math.max(1, cachedFloodIntensity)
 		accumulator = math.min(accumulator + deltaTime, baseInterval * 2)
 		if not underAnimationLimit(animator) then
 			return
@@ -83314,6 +83347,8 @@ local function startPriorityMask(character)
 	local accumulator = 0
 	local cursor = 0
 	local nextInterval = nil
+	local cachedFloodIntensity2 = 8
+	local lastFloodIntensityCheck2 = nil
 	local connection
 	connection = RunService.RenderStepped:Connect(function(deltaTime)
 		if not running then
@@ -83353,7 +83388,13 @@ local function startPriorityMask(character)
 				end)
 			end
 		end
-		local baseInterval = 1 / math.max(1, getOption("TestBreakerFloodIntensity", 8))
+		lastFloodIntensityCheck2 = lastFloodIntensityCheck2 or 0
+		lastFloodIntensityCheck2 = lastFloodIntensityCheck2 + deltaTime
+		if lastFloodIntensityCheck2 >= 0.1 then
+			cachedFloodIntensity2 = getOption("TestBreakerFloodIntensity", 8)
+			lastFloodIntensityCheck2 = 0
+		end
+		local baseInterval = 1 / math.max(1, cachedFloodIntensity2)
 		accumulator = math.min(accumulator + deltaTime, baseInterval * 2)
 		if not underAnimationLimit(animator) then
 			return
