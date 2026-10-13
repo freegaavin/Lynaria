@@ -25216,7 +25216,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -25325,9 +25325,9 @@ function SaveManager.init()
 			punishable = 0,
 			name = "FlameRepulsion",
 			hitbox = {
-				Y = 104,
-				X = 104,
-				Z = 104,
+				Y = 32,
+				X = 32,
+				Z = 32,
 			},
 			fhb = false,
 			imdd = 0,
@@ -25841,7 +25841,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -25996,14 +25996,14 @@ function SaveManager.init()
 			umoa = true,
 			smod = "WeaponFlourishTest",
 			uif = false,
-			bfht = 0.3,
+			bfht = 0.6,
 			ibi = false,
 			pfh = true,
 			dp = false,
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.2500000298023224,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -26061,7 +26061,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -26223,7 +26223,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -29693,7 +29693,7 @@ function SaveManager.init()
 			name = "IceCarve",
 			hitbox = {
 				Y = 32,
-				X = 40,
+				X = 32,
 				Z = 50,
 			},
 			fhb = true,
@@ -32376,7 +32376,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -32919,7 +32919,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -33103,11 +33103,11 @@ function SaveManager.init()
 					_type = "Parry",
 					name = "Release",
 					hitbox = {
-						Y = 31,
-						X = 27,
-						Z = 28,
+						Y = 65,
+						X = 65,
+						Z = 65,
 					},
-					when = 450,
+					when = 500,
 					ihbc = false,
 				},
 			},
@@ -33128,7 +33128,7 @@ function SaveManager.init()
 			imdd = 0,
 			duih = true,
 			rsd = 0,
-			umoa = true,
+			umoa = false,
 			smod = "LordsSlice",
 			uif = false,
 			bfht = 0.3,
@@ -33184,7 +33184,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -33242,7 +33242,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -33830,11 +33830,11 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.2500000298023224,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
-			phd = true,
+			phd = false,
 			rsaw = 4,
 			smn = false,
 			nvfb = true,
@@ -34166,7 +34166,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -34386,7 +34386,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -34560,7 +34560,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -35371,7 +35371,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -35844,7 +35844,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -36620,7 +36620,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -36671,7 +36671,7 @@ function SaveManager.init()
 			umoa = false,
 			smod = "N/A",
 			uif = false,
-			bfht = nil,
+			bfht = 0/0,
 			ibi = false,
 			pfh = true,
 			dp = false,
@@ -37638,7 +37638,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -37684,7 +37684,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -38271,7 +38271,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -38387,7 +38387,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -38699,7 +38699,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -39092,7 +39092,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.2500000298023224,
+			pfht = 0.25,
 			iae = false,
 			phds = 1,
 			ha = false,
@@ -39381,7 +39381,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -39439,7 +39439,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -39601,7 +39601,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -40280,11 +40280,11 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.2500000298023224,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
-			phd = true,
+			phd = false,
 			rsaw = 4,
 			smn = false,
 			nvfb = true,
@@ -41877,7 +41877,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -44314,7 +44314,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -46159,7 +46159,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.2500000298023224,
+			pfht = 0.25,
 			iae = false,
 			phds = 1,
 			ha = false,
@@ -50047,7 +50047,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5000000596046448,
+			pfht = 0.7,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -50209,9 +50209,9 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.25,
+			pfht = 0.2500000298023224,
 			iae = false,
-			phds = 0.25,
+			phds = 0.2500000298023224,
 			ha = false,
 			phd = true,
 			rsaw = 4,
@@ -54422,7 +54422,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.2500000298023224,
+			pfht = 0.25,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -54468,7 +54468,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5,
+			pfht = 0.5000000596046448,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -59050,16 +59050,16 @@ function SaveManager.init()
 			uif = false,
 			bfht = 0.6,
 			ibi = false,
-			pfh = false,
-			dp = true,
+			pfh = true,
+			dp = false,
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.2500000298023224,
+			pfht = 0.25,
 			iae = false,
-			phds = 0.2500000298023224,
+			phds = 0.6,
 			ha = false,
-			phd = true,
+			phd = false,
 			rsaw = 4,
 			smn = false,
 			nvfb = true,
@@ -63357,7 +63357,7 @@ function SaveManager.init()
 			after = 0,
 			rsaid = "",
 			imb = false,
-			pfht = 0.5,
+			pfht = 0.5000000596046448,
 			iae = false,
 			phds = 0.6,
 			ha = false,
@@ -65483,6 +65483,214 @@ function SaveManager.init()
 			nvfb = true,
 			aatk = false,
 			imxd = 64,
+			tag = "M1",
+		},
+		{
+			rpd = 0,
+			hso = -5,
+			rsc = false,
+			ieae = false,
+			iapf = false,
+			actions = {
+				{
+					_type = "Parry",
+					name = "1",
+					hitbox = {
+						Y = 12,
+						X = 12,
+						Z = 12,
+					},
+					when = 300,
+					ihbc = false,
+				},
+			},
+			ndfb = false,
+			nbfb = false,
+			_id = "rbxassetid://77306531910525",
+			mat = 2000,
+			rpue = false,
+			srpn = false,
+			punishable = 0,
+			name = "OppressiveForce",
+			hitbox = {
+				Y = 0,
+				X = 0,
+				Z = 0,
+			},
+			fhb = false,
+			imdd = 0,
+			duih = false,
+			rsd = 0,
+			umoa = true,
+			smod = "WeaponFlourishTest",
+			uif = false,
+			bfht = 0.6,
+			ibi = false,
+			pfh = true,
+			dp = false,
+			after = 0,
+			rsaid = "",
+			imb = false,
+			pfht = 0.25,
+			iae = false,
+			phds = 0.6,
+			ha = false,
+			phd = false,
+			rsaw = 4,
+			smn = false,
+			nvfb = true,
+			aatk = false,
+			imxd = 204,
+			tag = "Undefined",
+		},
+		{
+			rpd = 0,
+			hso = 0,
+			rsc = false,
+			ieae = false,
+			iapf = false,
+			actions = {
+				{
+					_type = "Parry",
+					name = "1",
+					hitbox = {
+						Y = 31,
+						X = 31,
+						Z = 31,
+					},
+					when = 35,
+					ihbc = false,
+				},
+			},
+			ndfb = false,
+			nbfb = false,
+			_id = "rbxassetid://7761286827",
+			mat = 200,
+			rpue = false,
+			srpn = false,
+			punishable = 0,
+			name = "LightningStreamPull",
+			hitbox = {
+				Y = 0,
+				X = 0,
+				Z = 0,
+			},
+			fhb = false,
+			imdd = 0,
+			duih = false,
+			rsd = 0,
+			umoa = false,
+			smod = "LightningStream",
+			uif = false,
+			bfht = 0.3,
+			ibi = false,
+			pfh = false,
+			dp = false,
+			after = 0,
+			rsaid = "",
+			imb = false,
+			pfht = 0.15,
+			iae = true,
+			phds = 0,
+			ha = false,
+			phd = false,
+			rsaw = 4,
+			smn = false,
+			nvfb = false,
+			aatk = false,
+			imxd = 301,
+			tag = "Mantra",
+		},
+		{
+			rpd = 0,
+			hso = -5,
+			rsc = false,
+			ieae = false,
+			iapf = false,
+			actions = {},
+			ndfb = false,
+			nbfb = false,
+			_id = "rbxassetid://14435766591",
+			mat = 2000,
+			rpue = false,
+			srpn = false,
+			punishable = 0,
+			name = "PistolOneHandM2",
+			hitbox = {
+				Y = 0,
+				X = 0,
+				Z = 0,
+			},
+			fhb = false,
+			imdd = 0,
+			duih = false,
+			rsd = 0,
+			umoa = true,
+			smod = "WeaponTest",
+			uif = false,
+			bfht = 0.3,
+			ibi = false,
+			pfh = true,
+			dp = false,
+			after = 0,
+			rsaid = "",
+			imb = false,
+			pfht = 0.7,
+			iae = false,
+			phds = 0.6,
+			ha = false,
+			phd = false,
+			rsaw = 4,
+			smn = false,
+			nvfb = true,
+			aatk = false,
+			imxd = 125,
+			tag = "M1",
+		},
+		{
+			rpd = 0,
+			hso = -5,
+			rsc = false,
+			ieae = false,
+			iapf = false,
+			actions = {},
+			ndfb = false,
+			nbfb = false,
+			_id = "rbxassetid://14435763579",
+			mat = 2000,
+			rpue = false,
+			srpn = false,
+			punishable = 0,
+			name = "PistolOneHandM1",
+			hitbox = {
+				Y = 0,
+				X = 0,
+				Z = 0,
+			},
+			fhb = false,
+			imdd = 0,
+			duih = false,
+			rsd = 0,
+			umoa = true,
+			smod = "WeaponTest",
+			uif = false,
+			bfht = 0.3,
+			ibi = false,
+			pfh = true,
+			dp = false,
+			after = 0,
+			rsaid = "",
+			imb = false,
+			pfht = 0.7,
+			iae = false,
+			phds = 0.6,
+			ha = false,
+			phd = false,
+			rsaw = 4,
+			smn = false,
+			nvfb = true,
+			aatk = false,
+			imxd = 125,
 			tag = "M1",
 		},
 	},
@@ -75088,6 +75296,14 @@ local MAX_ANIMATIONS_PER_SECOND = 50
 local animationProcessWindowStart = os.clock()
 local animationProcessCount = 0
 
+local function antiBreakerStrategyEnabled(name)
+	local selected = Configuration.expectOptionValue("AntiBreakerStrategies")
+	if type(selected) ~= "table" then
+		return true
+	end
+	return selected[name] == true
+end
+
 local function underAnimationProcessCap()
 	local now = os.clock()
 	if now - animationProcessWindowStart >= 1 then
@@ -75142,7 +75358,10 @@ AnimatorDefender.stopped = LPH_NO_VIRTUALIZE(function(self, track, timing, notif
 	-- priority with TimePosition 0). While the anti is armed, ignore the animation end so a faked stop
 	-- can't abort the parry -- same effect as Allow Failure's ignore-animation-end, forced on at 100%.
 	-- RPUE timings keep their normal end handling (they rely on it to know when to stop repeating).
-	if not timing.rpue and Configuration.expectToggleValue("AntiBreakerEnabled") then
+	if not timing.rpue
+		and Configuration.expectToggleValue("AntiBreakerEnabled")
+		and antiBreakerStrategyEnabled("Ignore Spoofed Animation Ends")
+	then
 		return false, internalNotifyFunction(timing, "Anti-AP Breaker: ignoring animation end.")
 	end
 
@@ -76330,6 +76549,12 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 	self:capb(now)
 
 	local isPlayer = players:GetPlayerFromCharacter(self.entity) ~= nil
+	local contextChecks = antiBreakerStrategyEnabled("Ownership and Weapon Context")
+	local animationShapeChecks = antiBreakerStrategyEnabled("Animation Properties")
+	local burstChecks = antiBreakerStrategyEnabled("Burst and Replay Patterns")
+	local mantraEtherChecks = antiBreakerStrategyEnabled("Mantra Ether Validation")
+	local hitPlausibilityChecks = antiBreakerStrategyEnabled("Hit Plausibility")
+	local mobAnimationChecks = antiBreakerStrategyEnabled("Mob Animation Check")
 	local tr, m4, iCount = 0, 0, 0
 	local signals = {}
 	local function t(points, reason)
@@ -76349,10 +76574,10 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 	local mantraEther = nil
 	local Gr = false
 	local bt = false
-	local NA = weaponCtx.status == "mismatch"
+	local NA = contextChecks and weaponCtx.status == "mismatch"
 	local EA = weaponCtx.status == "confirmed"
 	local zo = false
-	local Tt = false
+	local Tt = not hitPlausibilityChecks
 
 	if not isPlayer then
 		oa(4)
@@ -76366,7 +76591,7 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 		oa(2)
 	end
 
-	if isPlayer and category == "mantra" then
+	if mantraEtherChecks and isPlayer and category == "mantra" then
 		mantraEther = self:apme(timing, aid, now)
 		if mantraEther.status == "spent" then
 			zo = true
@@ -76383,7 +76608,7 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 		end
 	end
 
-	if ownership.status == "missing" then
+	if contextChecks and ownership.status == "missing" then
 		t(2, "ownership-missing")
 	elseif ownership.status == "confirmed" then
 		oa(4)
@@ -76413,73 +76638,77 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 	local blendGap = false
 	local extremeSpeed = false
 
-	if wt >= 1 and wc <= 0.01 then
-		blendGap = true
-		t(2, "high-target-zero-current")
-	elseif wt >= 0.5 and wc <= 0.12 then
-		blendGap = true
-	end
-	if wt > 0 and wt <= 0.05 then
-		lowWeight = true
-		t(1, "very-low-weight")
-	elseif wt > 0 and wt <= 0.12 then
-		lowWeight = true
-		t(1, "low-weight")
-	end
-	if priority == Enum.AnimationPriority.Core then
-		badPriority = true
-		t(2, "core-priority")
-	elseif priority == Enum.AnimationPriority.Idle then
-		badPriority = true
-		t(1, "idle-priority")
-	end
-	if speed >= 10 then
-		badSpeed = true
-		extremeSpeed = true
-		t(4, "extreme-speed")
-	elseif speed >= 3 then
-		badSpeed = true
-		t(2, "fast-speed")
-	elseif speed > 0 and speed < 0.5 then
-		badSpeed = true
-		t(1, "slow-speed")
-	end
-	if length > 0 and length < 0.12 then
-		shortLen = true
-		t(2, "very-short-length")
-	end
-	if not track.IsPlaying then
-		shortLen = true
-		t(2, "not-playing")
+	if animationShapeChecks then
+		if wt >= 1 and wc <= 0.01 then
+			blendGap = true
+			t(2, "high-target-zero-current")
+		elseif wt >= 0.5 and wc <= 0.12 then
+			blendGap = true
+		end
+		if wt > 0 and wt <= 0.05 then
+			lowWeight = true
+			t(1, "very-low-weight")
+		elseif wt > 0 and wt <= 0.12 then
+			lowWeight = true
+			t(1, "low-weight")
+		end
+		if priority == Enum.AnimationPriority.Core then
+			badPriority = true
+			t(2, "core-priority")
+		elseif priority == Enum.AnimationPriority.Idle then
+			badPriority = true
+			t(1, "idle-priority")
+		end
+		if speed >= 10 then
+			badSpeed = true
+			extremeSpeed = true
+			t(4, "extreme-speed")
+		elseif speed >= 3 then
+			badSpeed = true
+			t(2, "fast-speed")
+		elseif speed > 0 and speed < 0.5 then
+			badSpeed = true
+			t(1, "slow-speed")
+		end
+		if length > 0 and length < 0.12 then
+			shortLen = true
+			t(2, "very-short-length")
+		end
+		if not track.IsPlaying then
+			shortLen = true
+			t(2, "not-playing")
+		end
 	end
 
 	local j3 = false
-	if isPlayer and self:_apIsMobAnimation(track) then
+	if mobAnimationChecks and isPlayer and self:_apIsMobAnimation(track) then
 		j3 = true
 		t(5, "player-mob-animation")
 	end
 
 	local gap = nil
-	if self._apLastKnownTime then
-		gap = now - self._apLastKnownTime
-		if gap < 0.05 then
-			bt = true
-			t(3, "tiny-gap")
-		elseif gap < 0.12 then
-			bt = true
-			t(2, "short-gap")
-		elseif gap < 0.3 then
-			bt = true
-			t(gap <= 0.28 and 2 or 1, "breaker-gap")
+	if burstChecks then
+		if self._apLastKnownTime then
+			gap = now - self._apLastKnownTime
+			if gap < 0.05 then
+				bt = true
+				t(3, "tiny-gap")
+			elseif gap < 0.12 then
+				bt = true
+				t(2, "short-gap")
+			elseif gap < 0.3 then
+				bt = true
+				t(gap <= 0.28 and 2 or 1, "breaker-gap")
+			end
 		end
-	end
 
-	local sameId = self._apHistory[aid]
-	local sameCount = (sameId and #sameId or 0) + 1
-	if sameCount >= 5 then
-		t(3, "same-id-spam")
-	elseif sameCount >= 3 then
-		t(2, "same-id-repeat")
+		local sameId = self._apHistory[aid]
+		local sameCount = (sameId and #sameId or 0) + 1
+		if sameCount >= 5 then
+			t(3, "same-id-spam")
+		elseif sameCount >= 3 then
+			t(2, "same-id-repeat")
+		end
 	end
 
 	local globalCount = #self._apGlobalHistory + 1
@@ -76497,57 +76726,61 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 		end
 	end
 	local q = false
-	if globalCount >= 8 then
-		q = true
-		t(3, "global-spam")
-	elseif globalCount >= 5 then
-		q = true
-		t(2, "global-burst")
-	elseif globalCount >= 3 then
-		q = true
-		t(2, "burst-pressure")
-	end
-	if globalCount >= 3 and uniqueIds >= 3 then
-		q = true
-		t(2, "rotating-id-burst")
-	elseif globalCount >= 3 and uniqueIds >= 2 then
-		q = true
-		t(1, "rotating-id-pair")
-	end
-	if globalCount >= 3 and uniqueCats >= 2 then
-		q = true
-		t(2, "rotating-category-burst")
-	end
-	if bt and globalCount >= 2 and uniqueIds >= 2 then
-		q = true
-		t(2, "breaker-window-rotation")
-	end
-	if RA(category) and globalCount >= 3 and (uniqueIds >= 2 or uniqueCats >= 2) then
-		q = true
-		t(1, "weapon-rotation-pressure")
-	end
-	local activeSusp = apbActiveSuspicious(self._apActive)
-	if activeSusp >= 4 then
-		q = true
-		t(2, "active-suspicious-limit")
-	end
-	local shortCount = #self._apShortDurations
-	if shortCount >= 3 then
-		q = true
-		shortLen = true
-		t(3, "stopped-track-pattern")
-	elseif shortCount >= 1 and globalCount >= 2 then
-		q = true
-		shortLen = true
-		t(2, "recent-short-stop")
+	local activeSusp = 0
+	local shortCount = 0
+	if burstChecks then
+		if globalCount >= 8 then
+			q = true
+			t(3, "global-spam")
+		elseif globalCount >= 5 then
+			q = true
+			t(2, "global-burst")
+		elseif globalCount >= 3 then
+			q = true
+			t(2, "burst-pressure")
+		end
+		if globalCount >= 3 and uniqueIds >= 3 then
+			q = true
+			t(2, "rotating-id-burst")
+		elseif globalCount >= 3 and uniqueIds >= 2 then
+			q = true
+			t(1, "rotating-id-pair")
+		end
+		if globalCount >= 3 and uniqueCats >= 2 then
+			q = true
+			t(2, "rotating-category-burst")
+		end
+		if bt and globalCount >= 2 and uniqueIds >= 2 then
+			q = true
+			t(2, "breaker-window-rotation")
+		end
+		if RA(category) and globalCount >= 3 and (uniqueIds >= 2 or uniqueCats >= 2) then
+			q = true
+			t(1, "weapon-rotation-pressure")
+		end
+		activeSusp = apbActiveSuspicious(self._apActive)
+		if activeSusp >= 4 then
+			q = true
+			t(2, "active-suspicious-limit")
+		end
+		shortCount = #self._apShortDurations
+		if shortCount >= 3 then
+			q = true
+			shortLen = true
+			t(3, "stopped-track-pattern")
+		elseif shortCount >= 1 and globalCount >= 2 then
+			q = true
+			shortLen = true
+			t(2, "recent-short-stop")
+		end
 	end
 
 	local shapeSuspicious = lowWeight or badPriority or badSpeed or shortLen or blendGap
-	local missing = ownership.status == "missing"
+	local missing = contextChecks and ownership.status == "missing"
 	local confirmedOwn = ownership.status == "confirmed"
 	local Or = false
 	local needsLegitimacy = isPlayer and (timing.tag == "Mantra" or timing.tag == "Critical" or timing.tag == "M1"
-		or timing.tag == "Undefined" or timing.umoa or ownership.reason == "unmapped" or NA or RA(category))
+		or timing.tag == "Undefined" or timing.umoa or (contextChecks and ownership.reason == "unmapped") or NA or RA(category))
 	if needsLegitimacy and not confirmedOwn and not EA and (missing or NA or shapeSuspicious or q or bt) then
 		Or = true
 		if not missing then
@@ -76556,7 +76789,7 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 	end
 
 	local hitPlausible = false
-	if not zo then
+	if hitPlausibilityChecks and not zo then
 		local geomOk, geomReason = self:apbh(timing)
 		if geomOk then
 			Tt = true
@@ -76569,9 +76802,10 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 		end
 	end
 
-	local realistic = not shapeSuspicious and track.IsPlaying and (weight <= 0 or weight >= 0.12)
-		and (speed <= 0 or (speed >= 0.5 and speed <= 2.25))
-	local notPlaying = not track.IsPlaying
+	local realistic = not animationShapeChecks
+		or (not shapeSuspicious and track.IsPlaying and (weight <= 0 or weight >= 0.12)
+			and (speed <= 0 or (speed >= 0.5 and speed <= 2.25)))
+	local notPlaying = animationShapeChecks and not track.IsPlaying
 	local ownedRealOrConfirmed = confirmedOwn or EA
 	local moduleCtx = timing.rpue or (timing.duih and (ownedRealOrConfirmed or not isPlayer)) or (timing.umoa and ownedRealOrConfirmed)
 	local n3 = moduleCtx and not q
@@ -76617,7 +76851,7 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 		score = tr,
 		trust = m4,
 		category = category,
-		geometricPlausible = hitPlausible or Tt,
+		geometricPlausible = hitPlausibilityChecks and (hitPlausible or Tt) or nil,
 		signals = signals,
 		raw = {
 			category = category,
@@ -76625,7 +76859,7 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 			breakerTimer = bt,
 			recentGlobal = globalCount,
 			plausible = hitPlausible,
-			geometricPlausibility = Tt and "plausible" or "none",
+			geometricPlausibility = not hitPlausibilityChecks and "disabled" or (Tt and "plausible" or "none"),
 			mantraEtherStatus = mantraEther and mantraEther.status or "not-applicable",
 			mantraEtherSerial = mantraEther and mantraEther.serial or nil,
 			mantraEtherContext = mantraEther and mantraEther.context or "not-applicable",
@@ -90538,7 +90772,7 @@ end
 
 local function updateBreaker(rootPart, humanoid, dt)
     if tick() - lastApTick < 1/8 then 
-        return 
+        return
     end
     lastApTick = tick()
 
@@ -94952,45 +95186,6 @@ function AutomationTab.init(window)
 	AutomationTab.initEffectAutomation(tab:AddDynamicGroupbox("Effect Automation"))
 	AutomationTab.initAutoLootSection(tab:AddDynamicGroupbox("Auto Loot"))
 
-	local combatGroupbox = tab:AddDynamicGroupbox("Combat")
-	combatGroupbox:AddToggle("AutoRollCancel", {
-		Text = "Auto Roll Cancel",
-		Default = false,
-		Tooltip = "Automatically right-click shortly after pressing Q to cancel the roll.",
-	})
-
-	local userInputService = game:GetService("UserInputService")
-	userInputService.InputBegan:Connect(function(input)
-		if
-			input.KeyCode ~= Enum.KeyCode.Q
-			or not Toggles
-			or not Toggles.AutoRollCancel
-			or not Toggles.AutoRollCancel.Value
-			or userInputService:GetFocusedTextBox()
-		then
-			return
-		end
-
-		task.delay(0.01, function()
-			if not Toggles or not Toggles.AutoRollCancel or not Toggles.AutoRollCancel.Value then
-				return
-			end
-
-			if type(mouse2press) == "function" and type(mouse2release) == "function" then
-				mouse2press()
-				task.delay(0.05, mouse2release)
-				return
-			end
-
-			if type(keypress) == "function" and type(keyrelease) == "function" then
-				keypress(0x02)
-				task.delay(0.05, function()
-					keyrelease(0x02)
-				end)
-			end
-		end)
-	end)
-
 	if LRM_UserNote then
 		return
 	end
@@ -96124,9 +96319,11 @@ function CombatTab.initSilentAimSection(tab)
 end
 
 -- Initialize auto defense section.
----@param groupbox table
-function CombatTab.initAutoDefenseSection(groupbox)
-	local autoDefenseToggle = groupbox:AddToggle("EnableAutoDefense", {
+---@param autoParryTab table
+---@param antiExploitTab table
+---@param settingsTab table
+function CombatTab.initAutoDefenseSection(autoParryTab, antiExploitTab, settingsTab)
+	local autoDefenseToggle = autoParryTab:AddToggle("EnableAutoDefense", {
 		Text = "Enable Auto Parry",
 		Default = false,
 	})
@@ -96136,14 +96333,14 @@ function CombatTab.initAutoDefenseSection(groupbox)
 		{ Default = "N/A", SyncToggleState = true, Text = "Auto Parry" }
 	)
 
-	local autoDefenseDepBox = groupbox:AddDependencyBox()
+	local autoDefenseDepBox = autoParryTab:AddDependencyBox()
 
-	autoDefenseDepBox:AddToggle("EnableNotifications", {
+	settingsTab:AddToggle("EnableNotifications", {
 		Text = "Enable Notifications",
 		Default = false,
 	})
 
-	autoDefenseDepBox:AddToggle("EnableVisualizations", {
+	settingsTab:AddToggle("EnableVisualizations", {
 		Text = "Enable Visualizations",
 		Default = false,
 		Callback = Defense.visualizations,
@@ -96155,7 +96352,7 @@ function CombatTab.initAutoDefenseSection(groupbox)
 		Tooltip = "Simulate inputs to show on input overlay's.",
 	})
 
-	local simulationDepBox = autoDefenseDepBox:AddDependencyBox()
+	local simulationDepBox = settingsTab:AddDependencyBox()
 
 	simulationDepBox:AddSlider("SimulationHoldMinimum", {
 		Text = "Simulation Hold Minimum",
@@ -96243,7 +96440,7 @@ function CombatTab.initAutoDefenseSection(groupbox)
 	-- Anti-AP Breaker (luma's IngressGuard / AttackAuthenticator model): routes player attackers
 	-- through the crasher-protection ingress gate + authenticator while enabled; NPCs and the
 	-- disabled state fall straight through to normal auto-defense.
-	local antiBreakerToggle = autoDefenseDepBox:AddToggle("AntiBreakerEnabled", {
+	local antiBreakerToggle = antiExploitTab:AddToggle("AntiBreakerEnabled", {
 		Text = "Anti-AP Breaker",
 		Default = false,
 		Tooltip = "Stops you from getting AP-Broken",
@@ -96254,7 +96451,36 @@ function CombatTab.initAutoDefenseSection(groupbox)
 		{ Default = "N/A", SyncToggleState = true, Text = "Anti-AP Breaker" }
 	)
 
-	autoDefenseDepBox:AddToggle("AntiBreakerNotify", {
+	local antiBreakerStrategies = antiExploitTab:AddDependencyBox()
+	antiBreakerStrategies:AddDropdown("AntiBreakerStrategies", {
+		Text = "Strategies",
+		Tooltip = "Select which Anti-AP Breaker checks to run. All checks are enabled by default.",
+		Values = {
+			"Ignore Spoofed Animation Ends",
+			"Burst and Replay Patterns",
+			"Animation Properties",
+			"Ownership and Weapon Context",
+			"Mantra Ether Validation",
+			"Hit Plausibility",
+			"Mob Animation Check",
+		},
+		Multi = true,
+		AllowNull = true,
+		Default = {
+			["Ignore Spoofed Animation Ends"] = true,
+			["Burst and Replay Patterns"] = true,
+			["Animation Properties"] = true,
+			["Ownership and Weapon Context"] = true,
+			["Mantra Ether Validation"] = true,
+			["Hit Plausibility"] = true,
+			["Mob Animation Check"] = true,
+		},
+	})
+	antiBreakerStrategies:SetupDependencies({
+		{ antiBreakerToggle, true },
+	})
+
+	antiExploitTab:AddToggle("AntiBreakerNotify", {
 		Text = "AP Break Notifications",
 		Default = false,
 		Tooltip = "Notify when a nearby player is flagged as trying to AP-break you.",
@@ -96292,13 +96518,13 @@ function CombatTab.initAutoDefenseSection(groupbox)
 		{ blatantRollToggle, true },
 	})
 
-	local afToggle = autoDefenseDepBox:AddToggle("AllowFailure", {
+	local afToggle = settingsTab:AddToggle("AllowFailure", {
 		Text = "Allow Failure",
 		Default = false,
 		Tooltip = "If enabled, the auto defense will sometimes intentionally fail to parry/deflect.",
 	})
 
-	local afDepBox = autoDefenseDepBox:AddDependencyBox()
+	local afDepBox = settingsTab:AddDependencyBox()
 
 	afDepBox:AddSlider("FailureRate", {
 		Text = "Failure Rate",
@@ -96340,7 +96566,7 @@ function CombatTab.initAutoDefenseSection(groupbox)
 		{ afToggle, true },
 	})
 
-	autoDefenseDepBox:AddDropdown("AutoDefenseFilters", {
+	settingsTab:AddDropdown("AutoDefenseFilters", {
 		Text = "Auto Parry Filters",
 		Values = {
 			"Filter Out M1s",
@@ -96359,13 +96585,13 @@ function CombatTab.initAutoDefenseSection(groupbox)
 		Default = {},
 	})
 
-	local blockInputToggle = autoDefenseDepBox:AddToggle("BlockInput", {
+	local blockInputToggle = autoParryTab:AddToggle("BlockInput", {
 		Text = "Block Input",
 		Default = false,
 		Tooltip = "Blocks selected user attack inputs while active defense tasks are running to prevent swing-throughs.",
 	})
 
-	local blockInputDepBox = autoDefenseDepBox:AddDependencyBox()
+	local blockInputDepBox = autoParryTab:AddDependencyBox()
 
 	blockInputDepBox:AddDropdown("BlockInputAllowedTargets", {
 		Text = "Block Input Targets",
@@ -96479,6 +96705,8 @@ function CombatTab.initAutoDefenseSection(groupbox)
 	autoDefenseDepBox:SetupDependencies({
 		{ autoDefenseToggle, true },
 	})
+
+	CombatTab.initApBreakerSection(antiExploitTab)
 end
 
 ---Create timing override callback.
@@ -97172,6 +97400,44 @@ function CombatTab.initCombatAssistance(groupbox)
 	autoDustlungeDepBox:SetupDependencies({
 		{ autoDustlungeToggle, true },
 	})
+
+	groupbox:AddToggle("AutoRollCancel", {
+		Text = "Auto Roll Cancel",
+		Default = false,
+		Tooltip = "Automatically right-click shortly after pressing Q to cancel the roll.",
+	})
+
+	local userInputService = game:GetService("UserInputService")
+	userInputService.InputBegan:Connect(function(input)
+		if
+			input.KeyCode ~= Enum.KeyCode.Q
+			or not Toggles
+			or not Toggles.AutoRollCancel
+			or not Toggles.AutoRollCancel.Value
+			or userInputService:GetFocusedTextBox()
+		then
+			return
+		end
+
+		task.delay(0.01, function()
+			if not Toggles or not Toggles.AutoRollCancel or not Toggles.AutoRollCancel.Value then
+				return
+			end
+
+			if type(mouse2press) == "function" and type(mouse2release) == "function" then
+				mouse2press()
+				task.delay(0.05, mouse2release)
+				return
+			end
+
+			if type(keypress) == "function" and type(keyrelease) == "function" then
+				keypress(0x02)
+				task.delay(0.05, function()
+					keyrelease(0x02)
+				end)
+			end
+		end)
+	end)
 end
 
 ---Initialize AP breaker section.
@@ -97464,7 +97730,12 @@ function CombatTab.init(window)
 	local tab = window:AddTab("Combat", "Combat", Icons.Combat)
 
 	-- Initialize sections.
-	CombatTab.initAutoDefenseSection(tab:AddDynamicGroupbox("Auto Parry"))
+	local autoDefenseTabs = tab:AddDynamicTabbox("Auto Parry")
+	CombatTab.initAutoDefenseSection(
+		autoDefenseTabs:AddTab("Auto Parry"),
+		autoDefenseTabs:AddTab("Anti Exploit"),
+		autoDefenseTabs:AddTab("Settings")
+	)
 	-- Create targeting section tab box.
 	local tabbox = tab:AddDynamicTabbox()
 	CombatTab.initCombatTargetingSection(tabbox:AddTab("Targeting"))
@@ -97474,7 +97745,6 @@ function CombatTab.init(window)
 	-- Initialize other sections.
 	CombatTab.initAttackAssistanceSection(tab:AddDynamicGroupbox("Attack Assistance"))
 	CombatTab.initCombatAssistance(tab:AddDynamicGroupbox("Combat Assistance"))
-	CombatTab.initApBreakerSection(tab:AddDynamicGroupbox("AP Breakers"))
 
 	-- Create timing probability section tab box.
 	local tpTabbox = tab:AddDynamicTabbox()
