@@ -79961,6 +79961,12 @@ local Defense = require("Features/Combat/Defense")
 ---@module Features.Combat.ExpApBreaker
 local ExpApBreaker = require("Features/Combat/ExpApBreaker")
 
+---@module Features.Combat.TestBreaker
+local TestBreaker = require("Features/Combat/TestBreaker")
+
+---@module Features.Combat.APBreakerLarp
+local APBreakerLarp = require("Features/Combat/APBreakerLarp")
+
 ---@module Features.Game.AnimationVisualizer
 local AnimationVisualizer = require("Features/Game/AnimationVisualizer")
 
@@ -79989,6 +79995,7 @@ local RevealAnimations = require("Features/Game/RevealAnimations")()
 function Features.init()
 	Defense.init()
 	ExpApBreaker.init()
+	TestBreaker.init()
 	Visuals.init()
 	Movement.init()
 	Monitoring.init()
@@ -80029,6 +80036,8 @@ function Features.detach()
 	FakeVoid.detach()
 	RevealAnimations.detach()
 	FishFarm.detach()
+	APBreakerLarp.detach()
+	TestBreaker.detach()
 	ExpApBreaker.detach()
 	Defense.detach()
 	CharismaFarm.detach()
@@ -82597,6 +82606,955 @@ if getgenv then
 end
 
 return ApBreaker
+
+end)
+__bundle_register("Features/Combat/TestBreaker", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Configuration = require("Utility/Configuration")
+local Logger = require("Utility/Logger")
+local TimingStore = require("Game/Timings/SaveManager")
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local TestBreaker = {}
+local active = false
+local modeCleanups = {}
+local characterAddedConnection = nil
+local ownedTracks = setmetatable({}, { __mode = "k" })
+local auxiliaryAnimationConnection = nil
+local auxiliaryCharacter = nil
+local auxiliaryGeneration = 0
+local originalTrackSettings = setmetatable({}, { __mode = "k" })
+local delayHandledTracks = setmetatable({}, { __mode = "k" })
+local cachedEffectReplicator = nil
+local FALLBACK_ATTACK_IDS = {
+	"rbxassetid://9726608174",
+	"rbxassetid://111647546998749",
+	"rbxassetid://5064195992",
+	"rbxassetid://6607519294",
+	"rbxassetid://7600160919",
+}
+local floodRandom = Random.new()
+
+local function getOption(name, fallback)
+	local value = Configuration.expectOptionValue(name)
+	if value == nil then
+		return fallback
+	end
+	return value
+end
+
+local function getAttackIds()
+	local ids = {}
+	local seen = {}
+	local store = TimingStore.as
+	if store then
+		pcall(function()
+			for _, entry in ipairs(store:list()) do
+				if entry.tag == "M1" or entry.tag == "Mantra" or entry.tag == "Critical" then
+					local id = entry:id()
+					if type(id) == "string" and id:match("%d") and not seen[id] then
+						seen[id] = true
+						ids[#ids + 1] = id
+					end
+				end
+			end
+		end)
+	end
+	if #ids == 0 then
+		return FALLBACK_ATTACK_IDS
+	end
+	return ids
+end
+
+local function underAnimationLimit(animator)
+	if Configuration.expectToggleValue("TestBreakerDontHitAnimLimit") == false then
+		return true
+	end
+	local ok, tracks = pcall(function()
+		return animator:GetPlayingAnimationTracks()
+	end)
+	return not ok or type(tracks) ~= "table" or #tracks < 60
+end
+
+local function loadTrack(animator, animationId)
+	local animation = Instance.new("Animation")
+	animation.AnimationId = animationId
+	local ok, track = pcall(function()
+		return animator:LoadAnimation(animation)
+	end)
+	if ok and track then
+		ownedTracks[track] = true
+		return track
+	end
+	return nil
+end
+
+local function loadTrackPool(animator, ids, targetSize)
+	local tracks = {}
+	if #ids == 0 then
+		return tracks
+	end
+	local count = math.min(targetSize, math.max(#ids, 20))
+	for index = 1, count do
+		local id = ids[(index - 1) % #ids + 1]
+		if not id:find("://", 1, true) then
+			id = "rbxassetid://" .. id
+		end
+		local track = loadTrack(animator, id)
+		if track then
+			track.Looped = false
+			tracks[#tracks + 1] = track
+		end
+	end
+	return tracks
+end
+
+local function destroyTracks(tracks)
+	for _, track in ipairs(tracks) do
+		pcall(function()
+			track:Stop(0)
+			track:Destroy()
+		end)
+	end
+end
+
+local function restoreTrackSettings()
+	for track, settings in pairs(originalTrackSettings) do
+		pcall(function()
+			track.Priority = settings.priority
+			track:AdjustWeight(settings.weight, 0)
+		end)
+		originalTrackSettings[track] = nil
+	end
+end
+
+local function getEffectReplicator()
+	if cachedEffectReplicator then
+		return cachedEffectReplicator
+	end
+	local instance = game:GetService("ReplicatedStorage"):FindFirstChild("EffectReplicator")
+	if not instance then
+		return nil
+	end
+	local ok, result = pcall(require, instance)
+	if ok then
+		cachedEffectReplicator = result
+	end
+	return cachedEffectReplicator
+end
+
+local function currentMoveType()
+	local effectReplicator = getEffectReplicator()
+	if effectReplicator then
+		local ok, critical = pcall(function()
+			return effectReplicator:HasAny("UsingCritical", "Critical")
+		end)
+		if ok and critical then
+			return "Critical"
+		end
+		local okMantra, mantra = pcall(function()
+			return effectReplicator:HasAny("CastingSpell", "UsingSpell")
+		end)
+		if okMantra and mantra then
+			return "Mantra"
+		end
+	end
+	return "M1"
+end
+
+local function anyMoveTypeSelected(selected)
+	if type(selected) ~= "table" then
+		return false
+	end
+	for _, enabled in pairs(selected) do
+		if enabled then
+			return true
+		end
+	end
+	return false
+end
+
+local function updateAuxiliaryHandlers(character)
+	auxiliaryGeneration = auxiliaryGeneration + 1
+	local generation = auxiliaryGeneration
+	if auxiliaryAnimationConnection then
+		auxiliaryAnimationConnection:Disconnect()
+		auxiliaryAnimationConnection = nil
+	end
+	restoreTrackSettings()
+
+	if not active or not character then
+		auxiliaryCharacter = nil
+		return
+	end
+
+	local useDelay = Configuration.expectToggleValue("TestBreakerAttackDelay") == true
+	local changePriority = Configuration.expectToggleValue("TestBreakerPriorityChanger") == true
+	local spoofAttackWeight = Configuration.expectToggleValue("TestBreakerSpoofAttackWeight") == true
+	local spoofTargetWeight = Configuration.expectToggleValue("TestBreakerSpoofTargetWeight") == true
+	if not (useDelay or changePriority or spoofAttackWeight or spoofTargetWeight) then
+		auxiliaryCharacter = nil
+		return
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		auxiliaryCharacter = nil
+		return
+	end
+	auxiliaryCharacter = character
+
+	auxiliaryAnimationConnection = animator.AnimationPlayed:Connect(function(track)
+		if not active or not track.Animation or ownedTracks[track] then
+			return
+		end
+		local animationId = tostring(track.Animation.AnimationId)
+		if not (TimingStore.as and TimingStore.as:index(animationId)) then
+			return
+		end
+
+		local moveTypes = Configuration.expectOptionValue("TestBreakerAttackDelayMoves")
+		if useDelay and (
+			not anyMoveTypeSelected(moveTypes)
+			or moveTypes[currentMoveType()] == true
+		) and not delayHandledTracks[track] then
+			delayHandledTracks[track] = true
+			if not originalTrackSettings[track] then
+				originalTrackSettings[track] = { priority = track.Priority, weight = track.WeightTarget }
+			end
+			local length = track.Length
+			pcall(function()
+				track:Stop(0)
+			end)
+			task.delay(getOption("TestBreakerAttackDelayTime", 0.13), function()
+				if character.Parent then
+					pcall(function()
+						track:Play(getOption("TestBreakerAttackDelayFade", 0.5), 1, 1)
+						track.TimePosition = 0
+					end)
+				end
+			end)
+			task.delay(length + getOption("TestBreakerAttackDelayTime", 0.13) + 0.4, function()
+				delayHandledTracks[track] = nil
+			end)
+		end
+
+		local settings = originalTrackSettings[track]
+		if not settings then
+			settings = { priority = track.Priority, weight = track.WeightTarget }
+			originalTrackSettings[track] = settings
+		end
+		local function apply()
+			if not active or auxiliaryGeneration ~= generation then
+				return
+			end
+			if Configuration.expectToggleValue("TestBreakerSpoofTargetWeight") then
+				pcall(function()
+					track:AdjustWeight(getOption("TestBreakerSpoofTargetWeightValue", 15), 0)
+				end)
+			elseif Configuration.expectToggleValue("TestBreakerSpoofAttackWeight") then
+				pcall(function()
+					track:AdjustWeight(getOption("TestBreakerSpoofAttackWeightValue", 0.9), 0)
+				end)
+			end
+			if Configuration.expectToggleValue("TestBreakerPriorityChanger") then
+				local priorityName = getOption("TestBreakerAttackPriority", "Action2")
+				pcall(function()
+					track.Priority = Enum.AnimationPriority[priorityName] or Enum.AnimationPriority.Action2
+				end)
+			end
+		end
+
+		apply()
+		task.spawn(function()
+			local length = track.Length
+			local startTime = os.clock()
+			while active and auxiliaryGeneration == generation do
+				task.wait()
+				if not track.IsPlaying or os.clock() - startTime > length + 0.25 then
+					break
+				end
+				apply()
+			end
+		end)
+	end)
+end
+
+local function startFloodMode(character, fadeTime, monsterFlood)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		return function() end
+	end
+
+	local ids = getAttackIds()
+	local priority = Enum.AnimationPriority.Action
+	if monsterFlood then
+		ids = {}
+		for slot = 104824667, 104824726 do
+			ids[#ids + 1] = string.format(
+				"https://www.roblox.com/asset/?attack=7600160919&slot=%d&id=11710290503",
+				slot
+			)
+		end
+		priority = Enum.AnimationPriority.Action
+	end
+	local tracks = loadTrackPool(animator, ids, monsterFlood and 60 or 200)
+	local running = true
+	local accumulator = 0
+	local cursor = 0
+	local nextInterval = nil
+	local connection
+	connection = RunService.RenderStepped:Connect(function(deltaTime)
+		if not running then
+			return
+		end
+		if not character.Parent then
+			running = false
+			return
+		end
+		if #tracks == 0 then
+			return
+		end
+		local baseInterval = 1 / math.max(1, getOption("TestBreakerFloodIntensity", 8))
+		accumulator = math.min(accumulator + deltaTime, baseInterval * 2)
+		if not underAnimationLimit(animator) then
+			return
+		end
+		local bursts = 0
+		local interval = nextInterval or baseInterval * floodRandom:NextNumber(0.4, 1.6)
+		while accumulator >= interval and bursts < 50 do
+			accumulator = accumulator - interval
+			bursts = bursts + 1
+			local chosen
+			for _ = 1, #tracks do
+				cursor = cursor % #tracks + 1
+				if not tracks[cursor].IsPlaying then
+					chosen = tracks[cursor]
+					break
+				end
+			end
+			if chosen then
+				pcall(function()
+					chosen.Priority = priority
+					chosen:Play(fadeTime, 1, 1)
+				end)
+			end
+			nextInterval = baseInterval * floodRandom:NextNumber(0.4, 1.6)
+			interval = nextInterval
+		end
+	end)
+
+	return function()
+		running = false
+		if connection then
+			connection:Disconnect()
+			connection = nil
+		end
+		destroyTracks(tracks)
+	end
+end
+
+local function startFadeTimeSpoof(character)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		return function() end
+	end
+
+	local running = true
+	local handled = setmetatable({}, { __mode = "k" })
+	local connection = animator.AnimationPlayed:Connect(function(track)
+		if not running or ownedTracks[track] or not track.Animation then
+			return
+		end
+		local id = tostring(track.Animation.AnimationId)
+		if not (TimingStore.as and TimingStore.as:index(id)) or handled[track] then
+			return
+		end
+		handled[track] = true
+		local length = track.Length
+		pcall(function()
+			track:Stop(0)
+		end)
+		task.delay(0.13, function()
+			if running then
+				pcall(function()
+					track:Play(0.05, 1, 1)
+					track.TimePosition = 0
+				end)
+			end
+			task.delay(length + 0.4, function()
+				handled[track] = nil
+			end)
+		end)
+	end)
+	return function()
+		running = false
+		connection:Disconnect()
+	end
+end
+
+local function startMutateMode(character)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		return function() end
+	end
+
+	local running = true
+	local attackSequence = 164879734
+	local slotSequence = 107
+	local copies = {}
+	local copyById = {}
+	local connection = animator.AnimationPlayed:Connect(function(track)
+		if not running or ownedTracks[track] or not track.Animation then
+			return
+		end
+		local animationId = tostring(track.Animation.AnimationId)
+		if not (TimingStore.as and TimingStore.as:index(animationId)) then
+			return
+		end
+		local id = animationId:match("[?&]id=(%d+)") or animationId:match("(%d+)")
+		if not id then
+			return
+		end
+		local copy = copyById[id]
+		if not copy then
+			local url = string.format(
+				"https://www.roblox.com/asset/?attack=%d&genuineactionshadow=1&slot=%d&id=%s",
+				attackSequence,
+				slotSequence,
+				id
+			)
+			attackSequence = attackSequence + 1
+			slotSequence = slotSequence + 1
+			copy = loadTrack(animator, url)
+			if not copy then
+				return
+			end
+			copyById[id] = copy
+			copies[#copies + 1] = copy
+		end
+		local position = track.TimePosition
+		local speed = track.Speed
+		local priority = track.Priority
+		pcall(function()
+			track:Stop(0)
+			if copy.IsPlaying then
+				copy:Stop(0)
+			end
+			copy.Priority = priority
+			copy:Play(0, 1, speed)
+			copy.TimePosition = position
+		end)
+	end)
+
+	return function()
+		running = false
+		connection:Disconnect()
+		destroyTracks(copies)
+	end
+end
+
+local function startPriorityMask(character)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		return function() end
+	end
+	local pool = loadTrackPool(animator, getAttackIds(), 200)
+	local poolSet = {}
+	for _, track in ipairs(pool) do
+		poolSet[track] = true
+	end
+	local cover = loadTrack(animator, "rbxassetid://180435571")
+	if cover then
+		cover.Looped = true
+	end
+	local originalPriorities = setmetatable({}, { __mode = "k" })
+	local running = true
+	local lastCoverReplay = 0
+	local accumulator = 0
+	local cursor = 0
+	local nextInterval = nil
+	local connection
+	connection = RunService.RenderStepped:Connect(function(deltaTime)
+		if not running then
+			return
+		end
+		if not character.Parent then
+			running = false
+			return
+		end
+		local showCover = Configuration.expectToggleValue("TestBreakerMaskVisual") ~= false
+		if cover and showCover then
+			local now = os.clock()
+			if not cover.IsPlaying or now - lastCoverReplay >= 0.3 then
+				pcall(function()
+					local position = cover.TimePosition
+					if cover.IsPlaying then
+						cover:Stop(0)
+					end
+					cover.Priority = Enum.AnimationPriority.Action2
+					cover:Play(0, 1, 1)
+					cover.TimePosition = position
+				end)
+				lastCoverReplay = now
+			end
+		elseif cover and cover.IsPlaying then
+			pcall(function()
+				cover:Stop(0.2)
+			end)
+		end
+		for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+			if not ownedTracks[track] and not poolSet[track] and track ~= cover and track.Animation and track.Animation.AnimationId then
+				if originalPriorities[track] == nil then
+					originalPriorities[track] = track.Priority
+				end
+				pcall(function()
+					track.Priority = Enum.AnimationPriority.Action3
+				end)
+			end
+		end
+		local baseInterval = 1 / math.max(1, getOption("TestBreakerFloodIntensity", 8))
+		accumulator = math.min(accumulator + deltaTime, baseInterval * 2)
+		if not underAnimationLimit(animator) then
+			return
+		end
+		local bursts = 0
+		local interval = nextInterval or baseInterval * floodRandom:NextNumber(0.4, 1.6)
+		while accumulator >= interval and bursts < 50 do
+			accumulator = accumulator - interval
+			bursts = bursts + 1
+			if #pool == 0 then
+				break
+			end
+			local chosen
+			for _ = 1, #pool do
+				cursor = cursor % #pool + 1
+				if not pool[cursor].IsPlaying then
+					chosen = pool[cursor]
+					break
+				end
+			end
+			if chosen then
+				pcall(function()
+					chosen.Priority = Enum.AnimationPriority.Action
+					chosen:Play(0.1, 1, 1)
+				end)
+			end
+			nextInterval = baseInterval * floodRandom:NextNumber(0.4, 1.6)
+			interval = nextInterval
+		end
+	end)
+
+	return function()
+		running = false
+		if connection then
+			connection:Disconnect()
+		end
+		for track, priority in pairs(originalPriorities) do
+			pcall(function()
+				track.Priority = priority
+			end)
+		end
+		if cover then
+			destroyTracks({ cover })
+		end
+		destroyTracks(pool)
+	end
+end
+
+local MODE_STARTERS = {
+	["Priority Mask"] = startPriorityMask,
+	["Fade Time Spoof"] = startFadeTimeSpoof,
+	["Fade Time Flood"] = function(character)
+		return startFloodMode(character, 99999, false)
+	end,
+	["Mutate"] = startMutateMode,
+	["Monster Flood"] = function(character)
+		return startFloodMode(character, 0.1, true)
+	end,
+}
+
+local function getSelectedModes()
+	local selected = Configuration.expectOptionValue("TestBreakerModes")
+	local result = {}
+	if type(selected) == "table" then
+		for key, value in pairs(selected) do
+			local name = value == true and key or value
+			if type(name) == "string" and MODE_STARTERS[name] then
+				result[name] = true
+			end
+		end
+	end
+	return result
+end
+
+local function applyModes(character, forceRestart)
+	if forceRestart then
+		for _, cleanup in pairs(modeCleanups) do
+			cleanup()
+		end
+		modeCleanups = {}
+	end
+	if not active or not character then
+		for _, cleanup in pairs(modeCleanups) do
+			cleanup()
+		end
+		modeCleanups = {}
+		updateAuxiliaryHandlers(nil)
+		return
+	end
+	local selected = getSelectedModes()
+	for mode, cleanup in pairs(modeCleanups) do
+		if not selected[mode] then
+			cleanup()
+			modeCleanups[mode] = nil
+		end
+	end
+	for mode in pairs(selected) do
+		if not modeCleanups[mode] then
+			modeCleanups[mode] = MODE_STARTERS[mode](character)
+		end
+	end
+	updateAuxiliaryHandlers(character)
+end
+
+function TestBreaker.refresh()
+	local player = Players.LocalPlayer
+	if active and player.Character then
+		applyModes(player.Character)
+	end
+end
+
+function TestBreaker.start()
+	if active then
+		TestBreaker.refresh()
+		return
+	end
+	active = true
+	local player = Players.LocalPlayer
+	characterAddedConnection = player.CharacterAdded:Connect(function(character)
+		applyModes(character, true)
+	end)
+	applyModes(player.Character or player.CharacterAdded:Wait())
+	Logger.warn("Custom AP Breaker started.")
+end
+
+function TestBreaker.stop()
+	if not active then
+		return
+	end
+	active = false
+	applyModes(nil)
+	if characterAddedConnection then
+		characterAddedConnection:Disconnect()
+		characterAddedConnection = nil
+	end
+	Logger.warn("Custom AP Breaker stopped.")
+end
+
+function TestBreaker.init()
+	if Configuration.expectToggleValue("TestBreakerEnabled") then
+		TestBreaker.start()
+	end
+end
+
+function TestBreaker.detach()
+	TestBreaker.stop()
+end
+
+return TestBreaker
+
+end)
+__bundle_register("Features/Combat/APBreakerLarp", function(require, _LOADED, __bundle_register, __bundle_modules)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+---@module Utility.Configuration
+local Configuration = require("Utility/Configuration")
+---@module GUI.Library
+local Library = require("GUI/Library")
+
+local AnimationFlooder = {}
+
+local FALLBACK_IDS = {
+	"rbxassetid://9726608174",
+	"rbxassetid://111647546998749",
+	"rbxassetid://5064195992",
+	"rbxassetid://6607519294",
+	"rbxassetid://7600160919",
+}
+local MOVE_TYPES = { M1 = true, Mantra = true, Critical = true }
+local FLOOD_PRIORITY = Enum.AnimationPriority.Action
+local MAX_POOL = 200
+
+local running = false
+local targetPlayer = nil
+local currentAnimator = nil
+local trackPool = {}
+local accumulator = 0
+local poolCursor = 0
+local renderConn = nil
+local charAddedConn = nil
+local charRemovingConn = nil
+local playerRemovingConn = nil
+
+local function getIntensity()
+	local value = Configuration.expectOptionValue("APBreakerLarpIntensity")
+	if type(value) ~= "number" then
+		return 8
+	end
+	return value
+end
+
+local function collectAttackIds()
+	local ids, seen = {}, {}
+	pcall(function()
+		local TimingStore = require("Game/Timings/SaveManager")
+		for _, entry in ipairs(TimingStore.as:list()) do
+			if MOVE_TYPES[entry.tag] then
+				local id = entry:id()
+				if type(id) == "string" and id:match("%d") and not seen[id] then
+					seen[id] = true
+					ids[#ids + 1] = id
+				end
+			end
+		end
+	end)
+	if #ids == 0 then
+		return FALLBACK_IDS
+	end
+	return ids
+end
+
+local function destroyPool()
+	for _, track in ipairs(trackPool) do
+		pcall(function()
+			track:Stop(0)
+			track:Destroy()
+		end)
+	end
+	trackPool = {}
+	poolCursor = 0
+end
+
+local function loadPool(animator, idList)
+	destroyPool()
+	if type(idList) ~= "table" or #idList == 0 then
+		return
+	end
+
+	local targetSize = math.min(MAX_POOL, math.max(#idList, 20))
+	local cursor, attempts = 0, 0
+	local maxAttempts = targetSize + #idList + 8
+	while #trackPool < targetSize and attempts < maxAttempts do
+		attempts = attempts + 1
+		cursor = cursor % #idList + 1
+		local id = idList[cursor]
+		if not string.find(id, "://", 1, true) then
+			id = "rbxassetid://" .. id
+		end
+		local animation = Instance.new("Animation")
+		animation.AnimationId = id
+		local ok, track = pcall(function()
+			return animator:LoadAnimation(animation)
+		end)
+		animation:Destroy()
+		if ok and track then
+			track.Looped = false
+			pcall(function()
+				track.Priority = FLOOD_PRIORITY
+			end)
+			trackPool[#trackPool + 1] = track
+		end
+	end
+end
+
+local function bindCharacter(character)
+	currentAnimator = nil
+	destroyPool()
+	if not character then
+		return
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	if animator then
+		currentAnimator = animator
+		loadPool(animator, collectAttackIds())
+		return
+	end
+
+	task.spawn(function()
+		local humanoid = character:WaitForChild("Humanoid", 5)
+		local animator = humanoid and humanoid:WaitForChild("Animator", 5)
+		if animator and running and targetPlayer and targetPlayer.Character == character then
+			currentAnimator = animator
+			loadPool(animator, collectAttackIds())
+		end
+	end)
+end
+
+local function bindPlayer(player)
+	if charAddedConn then
+		charAddedConn:Disconnect()
+		charAddedConn = nil
+	end
+	if charRemovingConn then
+		charRemovingConn:Disconnect()
+		charRemovingConn = nil
+	end
+	if playerRemovingConn then
+		playerRemovingConn:Disconnect()
+		playerRemovingConn = nil
+	end
+
+	targetPlayer = player
+	if not player then
+		currentAnimator = nil
+		destroyPool()
+		return
+	end
+
+	charAddedConn = player.CharacterAdded:Connect(function(character)
+		if running and targetPlayer == player then
+			bindCharacter(character)
+		end
+	end)
+	charRemovingConn = player.CharacterRemoving:Connect(function()
+		if running and targetPlayer == player then
+			currentAnimator = nil
+			destroyPool()
+		end
+	end)
+	playerRemovingConn = Players.PlayerRemoving:Connect(function(leavingPlayer)
+		if targetPlayer == leavingPlayer then
+			bindPlayer(nil)
+		end
+	end)
+
+	bindCharacter(player.Character)
+end
+
+local function resolveByName(name)
+	if type(name) ~= "string" or name == "" then
+		return nil
+	end
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Name == name then
+			return player
+		end
+	end
+	local lower = string.lower(name)
+	for _, player in ipairs(Players:GetPlayers()) do
+		if string.lower(player.Name) == lower or string.lower(player.DisplayName) == lower then
+			return player
+		end
+	end
+	return nil
+end
+
+local function startLoop()
+	if renderConn then
+		return
+	end
+	renderConn = RunService.RenderStepped:Connect(function(deltaTime)
+		if not running then
+			return
+		end
+		if not currentAnimator or #trackPool == 0 then
+			return
+		end
+
+		local interval = 1 / math.max(1, getIntensity())
+		accumulator = math.min(accumulator + deltaTime, interval * 2)
+
+		local burstsThisFrame = 0
+		while accumulator >= interval and burstsThisFrame < 50 do
+			accumulator = accumulator - interval
+			burstsThisFrame = burstsThisFrame + 1
+
+			local chosen = nil
+			for _ = 1, #trackPool do
+				poolCursor = poolCursor % #trackPool + 1
+				local candidate = trackPool[poolCursor]
+				if candidate and not candidate.IsPlaying then
+					chosen = candidate
+					break
+				end
+			end
+			local recycled = false
+			if not chosen then
+				poolCursor = poolCursor % #trackPool + 1
+				chosen = trackPool[poolCursor]
+				recycled = chosen ~= nil
+			end
+			if chosen then
+				pcall(function()
+					if recycled then
+						chosen:Stop(0)
+					end
+					chosen.Priority = FLOOD_PRIORITY
+					chosen:Play(0.1, 1, 1)
+				end)
+			end
+		end
+	end)
+end
+
+function AnimationFlooder.startByName(name)
+	local player = resolveByName(name)
+	if not player then
+		Library:Notify("AP Breaker Larp: pick a target player first.", 4)
+		return
+	end
+	running = true
+	startLoop()
+	bindPlayer(player)
+end
+
+function AnimationFlooder.setTargetByName(name)
+	if running then
+		bindPlayer(resolveByName(name))
+	elseif Configuration.expectToggleValue("APBreakerLarpEnabled") then
+		AnimationFlooder.startByName(name)
+	end
+end
+
+function AnimationFlooder.stop()
+	running = false
+	if renderConn then
+		renderConn:Disconnect()
+		renderConn = nil
+	end
+	if charAddedConn then
+		charAddedConn:Disconnect()
+		charAddedConn = nil
+	end
+	if charRemovingConn then
+		charRemovingConn:Disconnect()
+		charRemovingConn = nil
+	end
+	if playerRemovingConn then
+		playerRemovingConn:Disconnect()
+		playerRemovingConn = nil
+	end
+	destroyPool()
+	currentAnimator = nil
+	targetPlayer = nil
+	accumulator = 0
+end
+
+function AnimationFlooder.detach()
+	AnimationFlooder.stop()
+end
+
+return AnimationFlooder
 
 end)
 __bundle_register("Features/Game/OwnershipWatcher", function(require, _LOADED, __bundle_register, __bundle_modules)
@@ -96277,6 +97235,203 @@ function CombatTab.initApBreakerSection(groupbox)
 	end)
 
 	local miraBreakerDepBox = groupbox:AddDependencyBox()
+
+	local testBreakerToggle = groupbox:AddToggle("TestBreakerEnabled", {
+		Text = "Custom AP Breaker",
+		Default = false,
+		Tooltip = "Runs the selected custom AP-breaker strategies.",
+	})
+
+	testBreakerToggle:AddKeyPicker("TestBreakerKeybind", {
+		Default = "N/A",
+		SyncToggleState = true,
+		Text = "Custom AP Breaker",
+	})
+
+	local testBreakerDepBox = groupbox:AddDependencyBox()
+	local testBreakerModes = testBreakerDepBox:AddDropdown("TestBreakerModes", {
+		Text = "Strategies",
+		Tooltip = "Choose which breaker strategies to run. Multiple strategies may run together.",
+		Values = {
+			"Priority Mask",
+			"Fade Time Spoof",
+			"Fade Time Flood",
+			"Mutate",
+			"Monster Flood",
+		},
+		Multi = true,
+		AllowNull = true,
+		Default = {},
+	})
+
+	testBreakerDepBox:AddSlider("TestBreakerFloodIntensity", {
+		Text = "Flood Intensity",
+		Default = 8,
+		Min = 1,
+		Max = 50,
+		Rounding = 0,
+		Tooltip = "Animation flood rate used by the flood strategies.",
+	})
+
+	testBreakerDepBox:AddToggle("TestBreakerMaskVisual", {
+		Text = "Mask Visual",
+		Default = true,
+		Tooltip = "Play the cover animation while Priority Mask is active.",
+	})
+
+	testBreakerDepBox:AddToggle("TestBreakerDontHitAnimLimit", {
+		Text = "Respect Animation Limit",
+		Default = true,
+		Tooltip = "Pause animation floods when 60 or more tracks are already playing.",
+	})
+
+	local attackDelayToggle = testBreakerDepBox:AddToggle("TestBreakerAttackDelay", {
+		Text = "Attack Delay",
+		Default = false,
+		Tooltip = "Stop recognized attacks briefly, then replay them.",
+	})
+
+	local attackDelayDepBox = testBreakerDepBox:AddDependencyBox()
+	local attackDelayMoves = attackDelayDepBox:AddDropdown("TestBreakerAttackDelayMoves", {
+		Text = "Delay On",
+		Values = { "M1", "Mantra", "Critical" },
+		Multi = true,
+		AllowNull = true,
+		Default = {},
+		Tooltip = "Select attack types to delay. No selection applies to all types.",
+	})
+	local attackDelayTime = attackDelayDepBox:AddSlider("TestBreakerAttackDelayTime", {
+		Text = "Delay",
+		Default = 0.13,
+		Min = 0,
+		Max = 0.6,
+		Suffix = "s",
+		Rounding = 2,
+	})
+	local attackDelayFade = attackDelayDepBox:AddSlider("TestBreakerAttackDelayFade", {
+		Text = "Replay Fade",
+		Default = 0.5,
+		Min = 0,
+		Max = 1,
+		Suffix = "s",
+		Rounding = 2,
+	})
+	attackDelayDepBox:SetupDependencies({
+		{ attackDelayToggle, true },
+	})
+
+	local priorityChangerToggle = testBreakerDepBox:AddToggle("TestBreakerPriorityChanger", {
+		Text = "Attack Priority Changer",
+		Default = false,
+		Tooltip = "Change the animation priority of recognized attacks.",
+	})
+	local attackPriority = testBreakerDepBox:AddDropdown("TestBreakerAttackPriority", {
+		Text = "Attack Priority",
+		Values = { "Action", "Action2", "Action3", "Action4" },
+		Default = "Action2",
+	})
+
+	local spoofAttackWeightToggle = testBreakerDepBox:AddToggle("TestBreakerSpoofAttackWeight", {
+		Text = "Spoof Attack Weight",
+		Default = false,
+		Tooltip = "Set the current weight of recognized attacks.",
+	})
+	local spoofAttackWeightValue = testBreakerDepBox:AddSlider("TestBreakerSpoofAttackWeightValue", {
+		Text = "Attack Weight",
+		Default = 0.9,
+		Min = 0,
+		Max = 1,
+		Rounding = 2,
+	})
+
+	local spoofTargetWeightToggle = testBreakerDepBox:AddToggle("TestBreakerSpoofTargetWeight", {
+		Text = "Spoof Target Weight",
+		Default = false,
+		Tooltip = "Set the target weight of recognized attacks.",
+	})
+	local spoofTargetWeightValue = testBreakerDepBox:AddSlider("TestBreakerSpoofTargetWeightValue", {
+		Text = "Target Weight",
+		Default = 15,
+		Min = 0,
+		Max = 20,
+		Rounding = 2,
+	})
+
+	local TestBreaker = require("Features/Combat/TestBreaker")
+	testBreakerToggle:OnChanged(function(state)
+		if state then
+			TestBreaker.start()
+		else
+			TestBreaker.stop()
+		end
+	end)
+
+	testBreakerModes:OnChanged(function()
+		TestBreaker.refresh()
+	end)
+
+	for _, option in ipairs({
+		attackDelayToggle,
+		attackDelayMoves,
+		attackDelayTime,
+		attackDelayFade,
+		priorityChangerToggle,
+		attackPriority,
+		spoofAttackWeightToggle,
+		spoofAttackWeightValue,
+		spoofTargetWeightToggle,
+		spoofTargetWeightValue,
+	}) do
+		option:OnChanged(function()
+			TestBreaker.refresh()
+		end)
+	end
+
+	testBreakerDepBox:SetupDependencies({
+		{ testBreakerToggle, true },
+	})
+
+	local APBreakerLarp = require("Features/Combat/APBreakerLarp")
+	local apBreakerLarpToggle = groupbox:AddToggle("APBreakerLarpEnabled", {
+		Text = "AP Breaker Larp",
+		Default = false,
+		Tooltip = "Floods the selected player's character with decoy attack animations.",
+	})
+
+	apBreakerLarpToggle:AddKeyPicker("APBreakerLarpKeybind", {
+		Default = "N/A",
+		SyncToggleState = true,
+		Text = "AP Breaker Larp",
+	})
+
+	local apBreakerLarpDepBox = groupbox:AddDependencyBox()
+	local apBreakerLarpTarget = apBreakerLarpDepBox:AddDropdown("APBreakerLarpTargetPlayer", {
+		Text = "Target Player",
+		SpecialType = "Player",
+		AllowNull = true,
+		Tooltip = "Choose the player whose character receives the animation flood.",
+	})
+	apBreakerLarpDepBox:AddSlider("APBreakerLarpIntensity", {
+		Text = "Flood Intensity",
+		Default = 8,
+		Min = 1,
+		Max = 50,
+		Rounding = 0,
+		Tooltip = "Decoy animations played per second.",
+	})
+	apBreakerLarpToggle:OnChanged(function(state)
+		if state then
+			APBreakerLarp.startByName(apBreakerLarpTarget.Value)
+		else
+			APBreakerLarp.stop()
+		end
+	end)
+	apBreakerLarpTarget:OnChanged(function(value)
+		APBreakerLarp.setTargetByName(value)
+	end)
+	apBreakerLarpDepBox:SetupDependencies({
+		{ apBreakerLarpToggle, true },
+	})
 
 	miraBreakerDepBox:AddSlider("ExpApBreakerAggressive2Intensity", {
 		Text = "Flood Intensity",
