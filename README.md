@@ -7,6 +7,7 @@ Powered & inspired by parts of Serenity's framework rewritten to the new coding 
 paste this into your executor to run the latest build:
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/freegaavin/Lynaria/refs/heads/main/Lynaria"))()
+
 It updates whenever a new build is pushed, so the loadstring always pulls the current version.
 
 For questions, issues, pull requests, and more...
