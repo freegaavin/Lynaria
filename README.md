@@ -25,4 +25,6 @@ Some code will be especially ugly. The modules are there for rapid development. 
 
 The 'Ui Library' code is very ugly. We did not care about that file because it was an external dependency.
 
+# Script
+
 Best PVP Script
