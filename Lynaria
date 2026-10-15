@@ -28604,8 +28604,9 @@ local fireServer = Instance.new("RemoteEvent").FireServer
 
 ---Random unblock hold time.
 ---@return number
+local holdRandom = Random.new()
 local function unblockHoldTime()
-	return Random.new():NextNumber(0.075, 0.115)
+	return holdRandom:NextNumber(0.075, 0.115)
 end
 
 -- Services.
@@ -77058,6 +77059,8 @@ return TimingSave
 
 end)
 __bundle_register("Features/Combat/Objects/Defender", function(require, _LOADED, __bundle_register, __bundle_modules)
+local sharedRandom = Random.new()
+
 ---@module Utility.Logger
 local Logger = require("Utility/Logger")
 
@@ -77385,7 +77388,7 @@ end)
 ---@param options ValidationOptions
 ---@return boolean
 Defender.valid = LPH_NO_VIRTUALIZE(function(self, options)
-	local integer = Random.new():NextNumber(1.0, 100.0)
+	local integer = sharedRandom:NextNumber(1.0, 100.0)
 	local rate = Configuration.expectOptionValue("FailureRate") or 0.0
 	local timing = options.timing
 
@@ -78035,7 +78038,7 @@ Defender.SimulateInput = LPH_NO_VIRTUALIZE(function(self, timing, action)
 			min, max = max, min
 		end
 
-		return Random.new():NextNumber(min, max)
+		return sharedRandom:NextNumber(min, max)
 	end
 
 	local function simulateRightClick(hold)
@@ -78154,7 +78157,7 @@ Defender.parry = LPH_NO_VIRTUALIZE(function(self, timing, action)
 		or effectReplicatorModule:FindEffect("Ghost")
 
 	-- Dash instead of parry.
-	local dashReplacement = Random.new():NextNumber(1.0, 100.0) <= rate
+	local dashReplacement = sharedRandom:NextNumber(1.0, 100.0) <= rate
 
 	if action and action._type ~= "Parry" then
 		dashReplacement = false
@@ -79871,7 +79874,9 @@ end
 return PartDefender
 
 end)
-__bundle_register("Features/Combat/Objects/AnimatorDefender") function(require, _LOADED, __bundle_register, __bundle_modules)
+__bundle_register("Features/Combat/Objects/AnimatorDefender", function(require, _LOADED, __bundle_register, __bundle_modules)
+local sharedRandom = Random.new()
+
 ---@module Features.Combat.Objects.Defender
 local Defender = require("Features/Combat/Objects/Defender")
 
@@ -80015,7 +80020,7 @@ local function reactRoll(timing)
 		return false
 	end
 
-	return Random.new():NextNumber(1.0, 100.0) <= reactRate
+	return sharedRandom:NextNumber(1.0, 100.0) <= reactRate
 end
 
 local MAX_ANIMATIONS_PER_SECOND = 50
@@ -80065,7 +80070,7 @@ AnimatorDefender.stopped = LPH_NO_VIRTUALIZE(function(self, track, timing, notif
 	if
 		(Configuration.expectToggleValue("AllowFailure") or overrideData)
 		and not timing.rpue
-		and Random.new():NextNumber(1.0, 100.0) <= rate
+		and sharedRandom:NextNumber(1.0, 100.0) <= rate
 		and StateListener.cdodge()
 	then
 		return false, internalNotifyFunction(timing, "Intentionally ignoring animation end to simulate human error.")
@@ -82375,7 +82380,7 @@ function AnimatorDefender:rlimit(track)
 				end
 			end
 			reason = "advanced-candidate-quarantine"
-		
+		end
 	else
 		reason = "untrusted-overflow"
 	end
@@ -83045,7 +83050,7 @@ end
 
 return AnimatorDefender
 
-end
+end)
 __bundle_register("Game/Timings/PlaybackData", function(require, _LOADED, __bundle_register, __bundle_modules)
 ---@class PlaybackData
 ---@field base number Timestamp of when the object was created.
