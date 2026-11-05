@@ -101012,7 +101012,7 @@ pcall(function()
 	gameName = productInfo.Name or "Unknown"
 end)
 
-local MENU_TITLE = string.format("(Commit p2n85) Lynaria | Deepwoken")
+local MENU_TITLE = string.format("(Commit p2n85) Lynaria Rewrite | Deepwoken")
 
 ---Initialize menu.
 function Menu.init()
