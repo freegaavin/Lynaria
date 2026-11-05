@@ -100999,7 +100999,7 @@ local renderStepped = Signal.new(runService.RenderStepped)
 local menuMaid = Maid.new()
 
 -- Constants.
-local VERSION = "1.1.6"
+local VERSION = "12345"
 
 Menu.VERSION = VERSION
 
@@ -101012,7 +101012,7 @@ pcall(function()
 	gameName = productInfo.Name or "Unknown"
 end)
 
-local MENU_TITLE = string.format("Lynaria | %s", gameName)
+local MENU_TITLE = string.format("(Commit p2n85) Lynaria | Deepwoken")
 
 ---Initialize menu.
 function Menu.init()
@@ -102639,6 +102639,23 @@ return LPH_NO_VIRTUALIZE(function()
 				writefile(self.Folder .. "/autoload.txt", name)
 				SaveManager.AutoloadLabel:SetText("Current autoload config: " .. name)
 				self.Library:Notify(string.format("Set %q to auto load", name))
+			end)
+
+			section:AddButton("Remove autoload config", function()
+				local path = self.Folder .. "/autoload.txt"
+
+				if not isfile(path) then
+					return self.Library:Notify("No autoload config is set")
+				end
+
+				local success, err = pcall(delfile, path)
+
+				if not success then
+					return self.Library:Notify("Failed to remove autoload config: " .. tostring(err))
+				end
+
+				SaveManager.AutoloadLabel:SetText("Current autoload config: none")
+				self.Library:Notify("Removed autoload config")
 			end)
 
 			SaveManager.AutoloadLabel = section:AddLabel("Current autoload config: none", true)
