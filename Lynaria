@@ -1593,6 +1593,7 @@ return LPH_NO_VIRTUALIZE(function()
 
 		OpenedFrames = {},
 		DependencyBoxes = {},
+		SearchIndex = {},
 
 		Signals = {},
 		ScreenGui = ScreenGui,
@@ -1733,6 +1734,61 @@ return LPH_NO_VIRTUALIZE(function()
 		if Library.SaveManager then
 			Library.SaveManager:Save()
 		end
+	end
+
+	function Library:RegisterSearchable(Text, GroupName, OwnerTab, Outer)
+		if type(Text) ~= "string" or Text == "" or not Outer then
+			return
+		end
+
+		table.insert(Library.SearchIndex, {
+			Text = Text,
+			GroupName = GroupName,
+			OwnerTab = OwnerTab,
+			Outer = Outer,
+		})
+	end
+
+	function Library:JumpToSearchResult(Entry)
+		if Entry.OwnerTab and Entry.OwnerTab.ShowTab then
+			Entry.OwnerTab:ShowTab()
+		end
+
+		task.defer(function()
+			RenderStepped:Wait()
+
+			local Outer = Entry.Outer
+			local ScrollFrame = Outer and Outer:FindFirstAncestorWhichIsA("ScrollingFrame")
+
+			if ScrollFrame then
+				local RelativeY = (Outer.AbsolutePosition.Y - ScrollFrame.AbsolutePosition.Y)
+					+ ScrollFrame.CanvasPosition.Y
+				local TargetY = math.clamp(
+					RelativeY - (ScrollFrame.AbsoluteSize.Y / 2) + (Outer.AbsoluteSize.Y / 2),
+					0,
+					math.max(ScrollFrame.CanvasSize.Y.Offset - ScrollFrame.AbsoluteSize.Y, 0)
+				)
+				ScrollFrame.CanvasPosition = Vector2.new(ScrollFrame.CanvasPosition.X, TargetY)
+			end
+
+			if not Outer or not Outer.Parent then
+				return
+			end
+
+			local Flash = Library:Create("Frame", {
+				BackgroundColor3 = Library.AccentColor,
+				BackgroundTransparency = 0.5,
+				BorderSizePixel = 0,
+				Size = UDim2.new(1, 0, 1, 0),
+				ZIndex = 50,
+				Parent = Outer,
+			})
+
+			TweenService:Create(Flash, TweenInfo.new(0.8), { BackgroundTransparency = 1 }):Play()
+			task.delay(0.8, function()
+				Flash:Destroy()
+			end)
+		end)
 	end
 
 	function Library:Create(Class, Properties)
@@ -3755,6 +3811,8 @@ return LPH_NO_VIRTUALIZE(function()
 				Options[Idx] = Textbox
 			end
 
+			Library:RegisterSearchable(Info.Text, Groupbox.Name, Groupbox.OwnerTab, TextBoxOuter)
+
 			return Textbox
 		end
 
@@ -3924,6 +3982,8 @@ return LPH_NO_VIRTUALIZE(function()
 			end
 
 			Library:UpdateDependencyBoxes()
+
+			Library:RegisterSearchable(Info.Text, Groupbox.Name, Groupbox.OwnerTab, ToggleOuter)
 
 			return Toggle
 		end
@@ -4217,6 +4277,8 @@ return LPH_NO_VIRTUALIZE(function()
 			if Idx then
 				Options[Idx] = Slider
 			end
+
+			Library:RegisterSearchable(Info.Text, Groupbox.Name, Groupbox.OwnerTab, SliderOuter)
 
 			return Slider
 		end
@@ -4888,6 +4950,8 @@ return LPH_NO_VIRTUALIZE(function()
 			if Idx then
 				Options[Idx] = Dropdown
 			end
+
+			Library:RegisterSearchable(Info.Text, Groupbox.Name, Groupbox.OwnerTab, DropdownOuter)
 
 			return Dropdown
 		end
@@ -5562,6 +5626,268 @@ return LPH_NO_VIRTUALIZE(function()
 			TextColor3 = "AccentColor",
 		})
 
+		do
+			local SearchOuter = Library:Create("Frame", {
+				BackgroundColor3 = Color3.new(0, 0, 0),
+				BorderColor3 = Color3.new(0, 0, 0),
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -7, 0, 4),
+				Size = UDim2.new(0, 140, 0, 17),
+				ZIndex = 2,
+				Parent = Inner,
+			})
+
+			Library:AddToRegistry(SearchOuter, {
+				BorderColor3 = "Black",
+			})
+
+			local SearchInner = Library:Create("Frame", {
+				BackgroundColor3 = Library.MainColor,
+				BorderColor3 = Library.OutlineColor,
+				BorderMode = Enum.BorderMode.Inset,
+				Size = UDim2.new(1, 0, 1, 0),
+				ZIndex = 3,
+				Parent = SearchOuter,
+			})
+
+			Library:AddToRegistry(SearchInner, {
+				BackgroundColor3 = "MainColor",
+				BorderColor3 = "OutlineColor",
+			})
+
+			Library:OnHighlight(
+				SearchOuter,
+				SearchOuter,
+				{ BorderColor3 = "AccentColor" },
+				{ BorderColor3 = "Black" }
+			)
+
+			local SearchBox = Library:Create("TextBox", {
+				BackgroundTransparency = 1,
+				Position = UDim2.new(0, 5, 0, 0),
+				Size = UDim2.new(1, -8, 1, 0),
+				FontFace = Library.Font,
+				PlaceholderColor3 = Color3.fromRGB(190, 190, 190),
+				PlaceholderText = "Search...",
+				Text = "",
+				TextColor3 = Library.FontColor,
+				TextSize = 14,
+				TextStrokeTransparency = 0,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				ClearTextOnFocus = false,
+				ZIndex = 4,
+				Parent = SearchInner,
+			})
+
+			Library:ApplyTextStroke(SearchBox)
+			Library:AddToRegistry(SearchBox, {
+				TextColor3 = "FontColor",
+			})
+
+			local MAX_SEARCH_RESULTS = 10
+			local RESULTS_WIDTH = 220
+			local ListOuter = Library:Create("Frame", {
+				BackgroundColor3 = Color3.new(0, 0, 0),
+				BorderColor3 = Color3.new(0, 0, 0),
+				ZIndex = 40,
+				Visible = false,
+				Name = "SearchListOuter",
+				Parent = ScreenGui,
+			})
+
+			local ListInner = Library:Create("Frame", {
+				BackgroundColor3 = Library.MainColor,
+				BorderColor3 = Library.OutlineColor,
+				BorderMode = Enum.BorderMode.Inset,
+				BorderSizePixel = 0,
+				Size = UDim2.new(1, 0, 1, 0),
+				ZIndex = 41,
+				Parent = ListOuter,
+			})
+
+			Library:AddToRegistry(ListInner, {
+				BackgroundColor3 = "MainColor",
+				BorderColor3 = "OutlineColor",
+			})
+
+			local Scrolling = Library:Create("ScrollingFrame", {
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				CanvasSize = UDim2.new(0, 0, 0, 0),
+				Size = UDim2.new(1, 0, 1, 0),
+				ZIndex = 41,
+				Parent = ListInner,
+				TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
+				BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
+				ScrollBarThickness = 3,
+				ScrollBarImageColor3 = Library.AccentColor,
+			})
+
+			Library:AddToRegistry(Scrolling, {
+				ScrollBarImageColor3 = "AccentColor",
+			})
+
+			Library:Create("UIListLayout", {
+				Padding = UDim.new(0, 0),
+				FillDirection = Enum.FillDirection.Vertical,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Parent = Scrolling,
+			})
+
+			local function PositionResults()
+				ListOuter.Position = UDim2.fromOffset(
+					SearchOuter.AbsolutePosition.X + SearchOuter.AbsoluteSize.X - RESULTS_WIDTH,
+					SearchOuter.AbsolutePosition.Y + SearchOuter.AbsoluteSize.Y + 1
+				)
+			end
+
+			local function CloseResults()
+				ListOuter.Visible = false
+				Library.OpenedFrames[ListOuter] = nil
+			end
+
+			local function OpenResults()
+				PositionResults()
+				ListOuter.Visible = true
+				Library.OpenedFrames[ListOuter] = true
+			end
+
+			local function RunSearch()
+				local Query = SearchBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
+
+				for _, Element in next, Scrolling:GetChildren() do
+					if not Element:IsA("UIListLayout") then
+						Element:Destroy()
+					end
+				end
+
+				if Query == "" then
+					CloseResults()
+					return
+				end
+
+				local LowerQuery = Query:lower()
+				local QueryWords = {}
+				for Word in LowerQuery:gmatch("%S+") do
+					table.insert(QueryWords, Word)
+				end
+
+				local Matches = {}
+				for _, Entry in next, Library.SearchIndex do
+					local Haystack = ((Entry.GroupName or "") .. " " .. Entry.Text):lower()
+					local AllWordsMatch = true
+
+					for _, Word in next, QueryWords do
+						if not Haystack:find(Word, 1, true) then
+							AllWordsMatch = false
+							break
+						end
+					end
+
+					if AllWordsMatch then
+						table.insert(Matches, Entry)
+					end
+				end
+
+				if #Matches == 0 then
+					CloseResults()
+					return
+				end
+
+				table.sort(Matches, function(A, B)
+					local ATextHit = A.Text:lower():find(LowerQuery, 1, true) ~= nil
+					local BTextHit = B.Text:lower():find(LowerQuery, 1, true) ~= nil
+					return ATextHit and not BTextHit
+				end)
+
+				while #Matches > MAX_SEARCH_RESULTS do
+					table.remove(Matches)
+				end
+
+				for _, Entry in next, Matches do
+					local ResultLabel = Entry.GroupName and (Entry.GroupName .. ": " .. Entry.Text) or Entry.Text
+					local Button = Library:Create("Frame", {
+						BackgroundColor3 = Library.MainColor,
+						BorderColor3 = Library.OutlineColor,
+						BorderMode = Enum.BorderMode.Middle,
+						Size = UDim2.new(1, -1, 0, 20),
+						ZIndex = 43,
+						Active = true,
+						Parent = Scrolling,
+					})
+
+					Library:AddToRegistry(Button, {
+						BackgroundColor3 = "MainColor",
+						BorderColor3 = "OutlineColor",
+					})
+
+					Library:CreateLabel({
+						Active = false,
+						Size = UDim2.new(1, -6, 1, 0),
+						Position = UDim2.new(0, 6, 0, 0),
+						TextSize = 13,
+						Text = ResultLabel,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextTruncate = Enum.TextTruncate.AtEnd,
+						ZIndex = 45,
+						Parent = Button,
+					})
+
+					Library:OnHighlight(
+						Button,
+						Button,
+						{ BorderColor3 = "AccentColor", ZIndex = 44 },
+						{ BorderColor3 = "OutlineColor", ZIndex = 43 }
+					)
+
+					Button.InputBegan:Connect(function(Input)
+						if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+							SearchBox.Text = ""
+							CloseResults()
+							Library:JumpToSearchResult(Entry)
+						end
+					end)
+				end
+
+				local Count = #Matches
+				Scrolling.CanvasSize = UDim2.fromOffset(0, (Count * 20) + 1)
+				ListOuter.Size = UDim2.fromOffset(RESULTS_WIDTH, math.clamp(Count * 20, 0, MAX_SEARCH_RESULTS * 20) + 1)
+				OpenResults()
+			end
+
+			SearchOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+				if ListOuter.Visible then
+					PositionResults()
+				end
+			end)
+
+			SearchBox:GetPropertyChangedSignal("Text"):Connect(RunSearch)
+			SearchBox.Focused:Connect(function()
+				if SearchBox.Text ~= "" then
+					RunSearch()
+				end
+			end)
+
+			InputService.InputBegan:Connect(function(Input)
+				if Input.UserInputType == Enum.UserInputType.MouseButton1 and ListOuter.Visible then
+					local ListPosition, ListSize = ListOuter.AbsolutePosition, ListOuter.AbsoluteSize
+					local SearchPosition, SearchSize = SearchOuter.AbsolutePosition, SearchOuter.AbsoluteSize
+					local OverList = Mouse.X >= ListPosition.X
+						and Mouse.X <= ListPosition.X + ListSize.X
+						and Mouse.Y >= ListPosition.Y
+						and Mouse.Y <= ListPosition.Y + ListSize.Y
+					local OverSearch = Mouse.X >= SearchPosition.X
+						and Mouse.X <= SearchPosition.X + SearchSize.X
+						and Mouse.Y >= SearchPosition.Y
+						and Mouse.Y <= SearchPosition.Y + SearchSize.Y
+
+					if not OverList and not OverSearch then
+						CloseResults()
+					end
+				end
+			end)
+		end
+
 		local MainSectionOuter = Library:Create("Frame", {
 			BackgroundColor3 = Library.BackgroundColor,
 			BorderColor3 = Library.OutlineColor,
@@ -5753,7 +6079,7 @@ return LPH_NO_VIRTUALIZE(function()
 			end
 
 			function Tab:AddGroupbox(Info)
-				local Groupbox = { Name = Info.Name }
+				local Groupbox = { Name = Info.Name, OwnerTab = Tab }
 
 				local BoxOuter = Library:Create("Frame", {
 					BackgroundColor3 = Library.BackgroundColor,
