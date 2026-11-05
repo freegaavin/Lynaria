@@ -1763,153 +1763,9 @@ return LPH_NO_VIRTUALIZE(function()
 		return tbl
 	end
 
-	function Library:RefreshInfoLogger()
-		local CurrentTypeCycle = Library.InfoLoggerCycles[Library.InfoLoggerCycle]
-		local Blacklist = Library.InfoLoggerData.KeyBlacklistList
+	function Library:RefreshInfoLogger() end
 
-		for Idx, Entry in next, Library.InfoLoggerData.MissingDataEntries do
-			if not Blacklist[Entry.Key] then
-				continue
-			end
-
-			table.remove(Library.InfoLoggerData.MissingDataEntries, Idx)
-
-			pcall(Entry.Label.Destroy, Entry.Label)
-		end
-
-		for Idx, Entry in next, Library.InfoLoggerData.MissingDataEntries do
-			Entry.Label.Parent = Entry.Type == CurrentTypeCycle and Library.InfoLoggerContainer or nil
-			Entry.Label.LayoutOrder = Idx
-		end
-
-		Library.InfoLoggerLabel.Text = string.format("Info Logger (%s)", CurrentTypeCycle)
-
-		local YSize = 0
-		local XSize = 0
-
-		for _, Entry in next, Library.InfoLoggerData.MissingDataEntries do
-			if not Entry.Label.Parent then
-				continue
-			end
-
-			YSize = YSize + Entry.Label.TextBounds.Y + 2
-
-			if Entry.Label.TextBounds.X <= XSize then
-				continue
-			end
-
-			XSize = Entry.Label.TextBounds.X
-		end
-
-		XSize = XSize + 20
-		YSize = YSize + 22
-
-		Library.InfoLoggerFrame.Size = UDim2.new(0, math.clamp(XSize, 210, 800), 0, math.clamp(YSize, 24, 180))
-	end
-
-	function Library:AddMissEntry(type, key, name, distance, parent)
-		local ifd = Library.InfoLoggerData
-		local mde = ifd.MissingDataEntries
-		local bl = ifd.KeyBlacklistList
-
-		if bl[key] then
-			return
-		end
-
-		table.insert(Entries, 1, function()
-			debug.profilebegin("Library:AddMissEntry")
-
-			local function getEntriesForThisType()
-				local entries = {}
-
-				for Idx, Entry in next, mde do
-					if Entry.Type == type then
-						table.insert(entries, { [1] = Entry, [2] = Idx })
-					end
-				end
-
-				return entries
-			end
-
-			-- Pop the last element if we're under 30 entries for this type.
-			-- Max of 30 entries per type; in total - 120 for all types.
-
-			local entries = getEntriesForThisType()
-			local last = entries[#entries]
-
-			if #entries > 30 and last then
-				last[1].Label:Destroy()
-
-				table.remove(mde, last[2])
-			end
-
-			local asset = typeof(key) == "string" and tonumber(key:sub(14, 40)) or nil
-
-			-- Create a new label.
-			---@type TextLabel
-			local label = Library:CreateLabel({
-				Text = name and string.format("(%.2fm away) Key '%s' from '%s' is missing.", distance, key, name)
-					or string.format("(%.2fm away) Key '%s' is missing.", distance, key),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Size = UDim2.new(1, 0, 0, 14),
-				LayoutOrder = 1,
-				TextSize = 12,
-				Visible = true,
-				ZIndex = 306,
-				Parent = nil,
-			}, true)
-
-			if parent then
-				label.Text = string.format("(%s) %s", parent, label.Text)
-			end
-
-			Library:AddToRegistry(label, {
-				TextColor3 = "FontColor",
-			}, true)
-
-			if asset then
-				task.spawn(function()
-					pcall(function()
-						local lol = game:GetService("MarketplaceService"):GetProductInfo(asset)
-						if not lol then
-							return
-						end
-
-						label.Text = string.format("(%s) %s", lol.Name, label.Text)
-					end)
-				end)
-			end
-
-			-- entry
-			local entry = { Label = label, Key = key, Type = type }
-
-			-- Copy & blacklist.
-			label.InputBegan:Connect(function(Input)
-				if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-					setclipboard(key)
-					Library:Notify(string.format("Copied key '%s' to clipboard.", key))
-				end
-
-				if Input.UserInputType == Enum.UserInputType.MouseButton2 then
-					ifd.KeyBlacklistList[key] = true
-					ifd.KeyBlacklistHistory[#ifd.KeyBlacklistHistory + 1] = key
-					Library:RefreshInfoLogger()
-					if Options and Options.BlacklistedKeys then
-						Options.BlacklistedKeys:SetValues(Library:KeyBlacklists())
-					end
-					Library:Notify(string.format("Blacklisted key '%s' from list.", key))
-				end
-			end)
-
-			-- Create a new entry for later destroying.
-			table.insert(mde, 1, entry)
-
-			-- Refresh.
-			Library:RefreshInfoLogger()
-
-			debug.profileend()
-		end)
-	end
+	function Library:AddMissEntry() end
 
 	function Library:ApplyTextStroke(Inst)
 		Inst.TextStrokeTransparency = 1
@@ -4286,6 +4142,59 @@ return LPH_NO_VIRTUALIZE(function()
 			fitSliderWidth()
 			SliderInner:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitSliderWidth)
 
+			-- Right-click the slider to type an exact value: the track highlights and the number is selected.
+			local EditBox = Library:Create("TextBox", {
+				BackgroundColor3 = Library.MainColor,
+				BorderSizePixel = 0,
+				ClearTextOnFocus = false,
+				FontFace = Library.Font,
+				Size = UDim2.new(1, 0, 1, 0),
+				Text = "",
+				TextColor3 = Library.AccentColor,
+				TextSize = 14,
+				Visible = false,
+				ZIndex = 12,
+				Parent = SliderInner,
+			})
+
+			Library:AddToRegistry(EditBox, {
+				BackgroundColor3 = "MainColor",
+				TextColor3 = "AccentColor",
+			})
+
+			local function endEdit()
+				EditBox.Visible = false
+				SliderOuter.BorderColor3 = Color3.new(0, 0, 0)
+			end
+
+			EditBox.FocusLost:Connect(function(Enter)
+				if Enter then
+					local Num = tonumber(EditBox.Text)
+
+					if Num then
+						Slider:SetValue(Round(math.clamp(Num, Slider.Min, Slider.Max)))
+						Library:AttemptSave()
+					end
+				end
+
+				endEdit()
+			end)
+
+			SliderInner.InputBegan:Connect(function(Input)
+				if Input.UserInputType ~= Enum.UserInputType.MouseButton2 or Library:MouseIsOverOpenedFrame() then
+					return
+				end
+
+				SliderOuter.BorderColor3 = Library.AccentColor
+				EditBox.Text = tostring(Slider.Value)
+				EditBox.Visible = true
+				EditBox:CaptureFocus()
+
+				-- Select the whole number so typing replaces it.
+				EditBox.CursorPosition = #EditBox.Text + 1
+				EditBox.SelectionStart = 1
+			end)
+
 			Slider:Display()
 			Groupbox:AddBlank(Info.BlankSize or 6)
 			Groupbox:Resize()
@@ -4464,11 +4373,14 @@ return LPH_NO_VIRTUALIZE(function()
 				BorderColor3 = "OutlineColor",
 			})
 
+			local SEARCH_HEIGHT = Info.Searchable and 24 or 0
+
 			local Scrolling = Library:Create("ScrollingFrame", {
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
 				CanvasSize = UDim2.new(0, 0, 0, 0),
-				Size = UDim2.new(1, 0, 1, 0),
+				Position = UDim2.fromOffset(0, SEARCH_HEIGHT),
+				Size = UDim2.new(1, 0, 1, -SEARCH_HEIGHT),
 				ZIndex = 21,
 				Parent = ListInner,
 
@@ -4490,6 +4402,31 @@ return LPH_NO_VIRTUALIZE(function()
 				Parent = Scrolling,
 			})
 
+			-- Searchable dropdowns get a type-to-filter box above the list.
+			local SearchBox = nil
+			if Info.Searchable then
+				SearchBox = Library:Create("TextBox", {
+					BackgroundColor3 = Library.BackgroundColor,
+					BorderSizePixel = 0,
+					ClearTextOnFocus = false,
+					FontFace = Library.Font,
+					PlaceholderText = "Type to search...",
+					PlaceholderColor3 = Color3.fromRGB(140, 140, 150),
+					Position = UDim2.fromOffset(2, 2),
+					Size = UDim2.new(1, -4, 0, 20),
+					Text = "",
+					TextColor3 = Library.FontColor,
+					TextSize = 13,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					ZIndex = 26,
+					Parent = ListInner,
+				})
+				Library:Create("UIPadding", { PaddingLeft = UDim.new(0, 5), Parent = SearchBox })
+				Library:AddToRegistry(SearchBox, {
+					BackgroundColor3 = "BackgroundColor",
+					TextColor3 = "FontColor",
+				})
+			end
 			function Dropdown:Display()
 				local Values = Dropdown.Values
 				local Str = ""
@@ -4523,9 +4460,32 @@ return LPH_NO_VIRTUALIZE(function()
 				end
 			end
 
+			-- Show only the entries matching the search text and size the list to fit them.
+			function Dropdown:ApplyFilter()
+				local Buttons = Dropdown.ButtonMap
+				if not Buttons then
+					return
+				end
+				local Query = SearchBox and string.lower(SearchBox.Text) or ""
+				local Visible = 0
+				for Frame, Entry in next, Buttons do
+					local Match = Query == "" or string.find(string.lower(tostring(Entry.Name)), Query, 1, true) ~= nil
+					if Frame.Visible ~= Match then
+						Frame.Visible = Match
+					end
+					if Match then
+						Visible = Visible + 1
+					end
+				end
+				Scrolling.CanvasSize = UDim2.fromOffset(0, (Visible * 20) + 1)
+				Scrolling.CanvasPosition = Vector2.zero
+				local Y = math.clamp(Visible * 20, 0, MAX_DROPDOWN_ITEMS * 20) + 1
+				RecalculateListSize(Y + SEARCH_HEIGHT)
+			end
 			function Dropdown:BuildDropdownList()
 				local Values = Dropdown.Values
 				local Buttons = {}
+				local Order = {}
 
 				for _, Element in next, Scrolling:GetChildren() do
 					if not Element:IsA("UIListLayout") then
@@ -4593,65 +4553,63 @@ return LPH_NO_VIRTUALIZE(function()
 							or "FontColor"
 					end
 
+					function Table:Activate()
+						local Try = not Selected
+
+						if Dropdown:GetActiveValues() == 1 and not Try and not Info.AllowNull then
+							return
+						end
+
+						if Info.Multi then
+							Selected = Try
+
+							if Selected then
+								Dropdown.Value[Value] = true
+							else
+								Dropdown.Value[Value] = nil
+							end
+						else
+							Selected = Try
+
+							if Selected then
+								Dropdown.Value = Value
+							else
+								Dropdown.Value = nil
+							end
+
+							for _, OtherButton in next, Buttons do
+								OtherButton:UpdateButton()
+							end
+
+							Library:UpdateDependencyBoxes()
+						end
+
+						Table:UpdateButton()
+						Dropdown:Display()
+
+						Library:SafeCallback("Dropdown_Callback" .. "_" .. (Idx or ""), Dropdown.Callback, Dropdown.Value)
+						Library:SafeCallback("Dropdown_Changed" .. "_" .. (Idx or ""), Dropdown.Changed, Dropdown.Value)
+
+						Library:AttemptSave()
+					end
+
 					ButtonLabel.InputBegan:Connect(function(Input)
 						if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-							local Try = not Selected
-
-							if Dropdown:GetActiveValues() == 1 and not Try and not Info.AllowNull then
-							else
-								if Info.Multi then
-									Selected = Try
-
-									if Selected then
-										Dropdown.Value[Value] = true
-									else
-										Dropdown.Value[Value] = nil
-									end
-								else
-									Selected = Try
-
-									if Selected then
-										Dropdown.Value = Value
-									else
-										Dropdown.Value = nil
-									end
-
-									for _, OtherButton in next, Buttons do
-										OtherButton:UpdateButton()
-									end
-
-									Library:UpdateDependencyBoxes()
-								end
-
-								Table:UpdateButton()
-								Dropdown:Display()
-
-								Library:SafeCallback(
-									"Dropdown_Callback" .. "_" .. (Idx or ""),
-									Dropdown.Callback,
-									Dropdown.Value
-								)
-								Library:SafeCallback(
-									"Dropdown_Changed" .. "_" .. (Idx or ""),
-									Dropdown.Changed,
-									Dropdown.Value
-								)
-
-								Library:AttemptSave()
-							end
+							Table:Activate()
 						end
 					end)
 
 					Table:UpdateButton()
 					Dropdown:Display()
 
+					Table.Name = Value
 					Buttons[Button] = Table
+					Order[#Order + 1] = Button
 				end
 
-				Scrolling.CanvasSize = UDim2.fromOffset(0, (Count * 20) + 1)
-
-				local Y = math.clamp(Count * 20, 0, MAX_DROPDOWN_ITEMS * 20) + 1
-				RecalculateListSize(Y)
+				Dropdown.ButtonMap = Buttons
+				Dropdown.ButtonOrder = Order
+				Dropdown:ApplyFilter()
 			end
 
 			function Dropdown:SetValues(NewValues)
@@ -4662,22 +4620,121 @@ return LPH_NO_VIRTUALIZE(function()
 				Dropdown:BuildDropdownList()
 			end
 
+			-- Select the first entry that matches the search (Enter).
+			function Dropdown:ActivateFirstMatch()
+				for _, Frame in ipairs(Dropdown.ButtonOrder or {}) do
+					if Frame.Visible then
+						local Entry = Dropdown.ButtonMap[Frame]
+						-- Enter on the already-selected entry just closes the list instead of deselecting it.
+						if Info.Multi or Dropdown.Value ~= Entry.Name then
+							Entry:Activate()
+						end
+						if not Info.Multi then
+							Dropdown:CloseDropdown()
+						end
+						return
+					end
+				end
+			end
+			local SearchActionName = nil
+			local function BindSearchKeys()
+				if SearchActionName then
+					return
+				end
+				Library.DropdownSearchCount = (Library.DropdownSearchCount or 0) + 1
+				SearchActionName = "LibraryDropdownSearch_" .. Library.DropdownSearchCount
+				local Keys = {}
+				local Chars = {}
+				for Code = string.byte("A"), string.byte("Z") do
+					local Letter = string.char(Code)
+					Keys[#Keys + 1] = Enum.KeyCode[Letter]
+					Chars[Enum.KeyCode[Letter]] = string.lower(Letter)
+				end
+				local Digits = { "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine" }
+				for Digit, Name in ipairs(Digits) do
+					Keys[#Keys + 1] = Enum.KeyCode[Name]
+					Chars[Enum.KeyCode[Name]] = tostring(Digit - 1)
+				end
+				Chars[Enum.KeyCode.Space] = " "
+				Chars[Enum.KeyCode.Period] = "."
+				Chars[Enum.KeyCode.Minus] = "-"
+				for KeyCode in next, { [Enum.KeyCode.Space] = 1, [Enum.KeyCode.Period] = 1, [Enum.KeyCode.Minus] = 1 } do
+					Keys[#Keys + 1] = KeyCode
+				end
+				table.insert(Keys, Enum.KeyCode.Backspace)
+				table.insert(Keys, Enum.KeyCode.Return)
+				table.insert(Keys, Enum.KeyCode.KeypadEnter)
+				table.insert(Keys, Enum.KeyCode.Escape)
+				pcall(function()
+					game:GetService("ContextActionService"):BindActionAtPriority(
+						SearchActionName,
+						function(_, State, Input)
+							if State ~= Enum.UserInputState.Begin then
+								return Enum.ContextActionResult.Sink
+							end
+							local Key = Input.KeyCode
+							if Key == Enum.KeyCode.Escape then
+								Dropdown:CloseDropdown()
+							elseif Key == Enum.KeyCode.Backspace then
+								SearchBox.Text = string.sub(SearchBox.Text, 1, -2)
+							elseif Key == Enum.KeyCode.Return or Key == Enum.KeyCode.KeypadEnter then
+								Dropdown:ActivateFirstMatch()
+							elseif Chars[Key] then
+								local Char = Chars[Key]
+								if
+									Key == Enum.KeyCode.Minus
+									and (
+										InputService:IsKeyDown(Enum.KeyCode.LeftShift)
+										or InputService:IsKeyDown(Enum.KeyCode.RightShift)
+									)
+								then
+									Char = "_"
+								end
+								SearchBox.Text = SearchBox.Text .. Char
+							end
+							return Enum.ContextActionResult.Sink
+						end,
+						false,
+						Enum.ContextActionPriority.High.Value,
+						table.unpack(Keys)
+					)
+				end)
+			end
+			local function UnbindSearchKeys()
+				if not SearchActionName then
+					return
+				end
+				pcall(function()
+					game:GetService("ContextActionService"):UnbindAction(SearchActionName)
+				end)
+				SearchActionName = nil
+			end
 			function Dropdown:OpenDropdown()
-				ListOuter.Position = UDim2.fromOffset(
-					DropdownOuter.AbsolutePosition.X,
-					DropdownOuter.AbsolutePosition.Y + DropdownOuter.Size.Y.Offset + 1
-				)
+				if SearchBox then
+					SearchBox.Text = ""
+					Dropdown:ApplyFilter()
+				end
 				ListOuter.Visible = true
+				-- Refresh anchor on open since the signal handler skips work while closed.
+				RecalculateListPosition()
 				Library.OpenedFrames[ListOuter] = true
 				DropdownArrow.Rotation = 180
+				if SearchBox then
+					-- Typing works straight away through the key sink; clicking the box focuses it for normal text editing.
+					BindSearchKeys()
+				end
 			end
-
 			function Dropdown:CloseDropdown()
+				if SearchBox then
+					UnbindSearchKeys()
+					if SearchBox:IsFocused() then
+						SearchBox:ReleaseFocus()
+					end
+				end
 				ListOuter.Visible = false
 				Library.OpenedFrames[ListOuter] = nil
 				DropdownArrow.Rotation = 0
 			end
-
 			function Dropdown:OnChanged(Func)
 				Dropdown.Changed = Func
 				Func(Dropdown.Value)
@@ -4730,6 +4787,22 @@ return LPH_NO_VIRTUALIZE(function()
 				Library:SafeCallback("Dropdown_Changed" .. "_" .. (Idx or ""), Dropdown.Changed, Dropdown.Value)
 			end
 
+			if SearchBox then
+				SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+					Dropdown:ApplyFilter()
+				end)
+				SearchBox.Focused:Connect(function()
+					UnbindSearchKeys()
+				end)
+				SearchBox.FocusLost:Connect(function(EnterPressed)
+					if ListOuter.Visible then
+						BindSearchKeys()
+					end
+					if EnterPressed then
+						Dropdown:ActivateFirstMatch()
+					end
+				end)
+			end
 			DropdownOuter.InputBegan:Connect(function(Input)
 				if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
 					if ListOuter.Visible then
@@ -5060,139 +5133,11 @@ return LPH_NO_VIRTUALIZE(function()
 		Library.WatermarkText = WatermarkLabel
 		Library:MakeDraggable(Library.Watermark)
 
-		local InfoLoggerOuter = Library:Create("Frame", {
-			BorderColor3 = Color3.new(0, 0, 0),
-			Position = UDim2.new(0, 15, 0.5, 0),
-			Size = UDim2.new(0, 210, 0, 20),
-			Visible = false,
-			ZIndex = 287,
-			Parent = ScreenGui,
-		})
-
-		local InfoLoggerInner = Library:Create("Frame", {
-			BackgroundColor3 = Library.MainColor,
-			BorderColor3 = Library.OutlineColor,
-			BorderMode = Enum.BorderMode.Inset,
-			Size = UDim2.new(1, 0, 1, 0),
-			ZIndex = 288,
-			Parent = InfoLoggerOuter,
-		})
-
-		Library:AddToRegistry(InfoLoggerInner, {
-			BackgroundColor3 = "MainColor",
-			BorderColor3 = "OutlineColor",
-		}, true)
-
-		local InfoColorFrame = Library:Create("Frame", {
-			BackgroundColor3 = Library.AccentColor,
-			BorderSizePixel = 0,
-			Size = UDim2.new(1, 0, 0, 2),
-			ZIndex = 299,
-			Parent = InfoLoggerInner,
-		})
-
-		Library:AddToRegistry(InfoColorFrame, {
-			BackgroundColor3 = "AccentColor",
-		}, true)
-
-		local InfoLoggerLabel = Library:CreateLabel({
-			Size = UDim2.new(1, 0, 0, 20),
-			Position = UDim2.fromOffset(5, 2),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextColor3 = Library.AccentColor,
-			Text = "Info Logger",
-			TextSize = 14,
-			ZIndex = 300,
-			Parent = InfoLoggerInner,
-		})
-
-		Library:AddToRegistry(InfoLoggerLabel, {
-			TextColor3 = "AccentColor",
-		}, true)
-
-		local InfoLoggerContainer = Library:Create("ScrollingFrame", {
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 1, -20),
-			Position = UDim2.new(0, 0, 0, 20),
-			ZIndex = 1,
-			ScrollBarThickness = 0,
-			Parent = InfoLoggerInner,
-		})
-
-		local InfoUIListLayout = Library:Create("UIListLayout", {
-			FillDirection = Enum.FillDirection.Vertical,
-			SortOrder = Enum.SortOrder.LayoutOrder,
-			Parent = InfoLoggerContainer,
-		})
-
-		InfoUIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-			InfoLoggerContainer.CanvasSize = UDim2.fromOffset(0, InfoUIListLayout.AbsoluteContentSize.Y)
-		end)
-
-		Library:Create("UIPadding", {
-			PaddingLeft = UDim.new(0, 5),
-			Parent = InfoLoggerContainer,
-		})
-
-		---@param InputObject InputObject
-		Library:GiveSignal(InfoLoggerOuter.InputBegan:Connect(function(InputObject)
-			if InputObject.UserInputType ~= Enum.UserInputType.Keyboard then
-				return
-			end
-
-			if
-
-				InputObject.KeyCode == Enum.KeyCode.Z
-				and game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftControl)
-			then
-				local kbh = Library.InfoLoggerData.KeyBlacklistHistory
-				local kbl = Library.InfoLoggerData.KeyBlacklistList
-				local front = kbh[1]
-				if not front then
-					return
-				end
-
-				kbl[front] = nil
-
-				table.remove(kbh, 1)
-
-				Library:RefreshInfoLogger()
-				if Options and Options.BlacklistedKeys then
-					Options.BlacklistedKeys:SetValues(Library:KeyBlacklists())
-				end
-				Library:Notify(string.format("Re-whitelisted key '%s' into list.", front))
-			end
-
-			if InputObject.KeyCode == Enum.KeyCode.Q then
-				Library.InfoLoggerCycle = math.max(Library.InfoLoggerCycle - 1, 1)
-				Library:RefreshInfoLogger()
-			end
-
-			if InputObject.KeyCode == Enum.KeyCode.E then
-				Library.InfoLoggerCycle = math.min(Library.InfoLoggerCycle + 1, #Library.InfoLoggerCycles)
-				Library:RefreshInfoLogger()
-			end
-		end))
-
-		-- default cycle is animation.
-		Library.InfoLoggerLabel = InfoLoggerLabel
-		Library.InfoLoggerFrame = InfoLoggerOuter
-		Library.InfoLoggerContainer = InfoLoggerContainer
-		Library.InfoLoggerCycle = 1
-		Library.InfoLoggerCycles = {
-			"Animation",
-			"Part",
-			"Sound",
-			"Effect",
-		}
 		Library.InfoLoggerData = {
 			MissingDataEntries = {},
 			KeyBlacklistHistory = {},
 			KeyBlacklistList = {},
 		}
-
-		Library:MakeDraggable(InfoLoggerOuter)
-		Library:RefreshInfoLogger()
 
 		local KeybindOuter = Library:Create("Frame", {
 			AnchorPoint = Vector2.new(0, 0.5),
@@ -102108,7 +102053,7 @@ return LPH_NO_VIRTUALIZE(function()
 				objects = {},
 				keybindFramePosition = uDIm2Export(self.Library.KeybindFrame.Position),
 				watermarkFramePosition = uDIm2Export(self.Library.Watermark.Position),
-				infoLoggerFramePosition = uDIm2Export(self.Library.InfoLoggerFrame.Position),
+				infoLoggerFramePosition = self.Library.InfoLoggerFrame and uDIm2Export(self.Library.InfoLoggerFrame.Position) or nil,
 				infoLoggerBlacklistHistory = self.Library.InfoLoggerData.KeyBlacklistHistory,
 				infoLoggerBlacklist = self.Library.InfoLoggerData.KeyBlacklistList,
 				infoLoggerCycle = self.Library.InfoLoggerData.InfoLoggerCycle,
@@ -102167,7 +102112,7 @@ return LPH_NO_VIRTUALIZE(function()
 				self.Library.Watermark.Position = uDim2Import(decoded.watermarkFramePosition)
 			end
 
-			if decoded.infoLoggerFramePosition then
+			if decoded.infoLoggerFramePosition and self.Library.InfoLoggerFrame then
 				self.Library.InfoLoggerFrame.Position = uDim2Import(decoded.infoLoggerFramePosition)
 			end
 
