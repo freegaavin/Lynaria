@@ -1973,6 +1973,21 @@ return LPH_NO_VIRTUALIZE(function()
 			TextColor3 = "FontColor",
 		})
 
+		-- Size the box from the label's real rendered text so it always contains it.
+		local function FitTooltip()
+			local Bounds = Label.TextBounds
+
+			if Bounds.X <= 0 or Bounds.Y <= 0 then
+				return
+			end
+
+			Label.Size = UDim2.fromOffset(Bounds.X + 2, Bounds.Y)
+			Tooltip.Size = UDim2.fromOffset(Bounds.X + 8, Bounds.Y + 4)
+		end
+
+		FitTooltip()
+		Label:GetPropertyChangedSignal("TextBounds"):Connect(FitTooltip)
+
 		Tooltips[#Tooltips + 1] = Tooltip
 
 		local IsHovering = false
