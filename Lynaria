@@ -82577,6 +82577,31 @@ end
 -- Sliding-window prune helpers (window seconds, cap entries).
 local AAPB_WINDOW = 1.0
 local AAPB_CAP = 16
+-- A freshly played track always has WeightCurrent ~0 while it fades in, so weight-ramp signals are
+-- meaningless until the track is older than this (Fade Time Flood is still caught: it never ramps).
+local APB_WEIGHT_RAMP_GRACE = 0.2
+-- Breakers commonly keep a non-attack "cover"/mask animation hard-restarted so their stops and
+-- plays keep replicating. Any untimed animation replayed this many times in quick succession
+-- fingerprints active churn on that attacker (strictness only -- it never blocks on its own).
+local APB_CHURN_STREAK = 3
+local APB_CHURN_GAP = 0.6
+local APB_CHURN_ACTIVE_WINDOW = 1.0
+local APB_CHURN_MAX_TRACKED = 64
+local function apbCountOthers(list, selfAt)
+	if not list then
+		return 0
+	end
+	if not selfAt then
+		return #list
+	end
+	local n = 0
+	for i = 1, #list do
+		if list[i] ~= selfAt then
+			n = n + 1
+		end
+	end
+	return n
+end
 local function apbPruneTimes(list, now)
 	local w = 0
 	for i = 1, #list do
@@ -83258,6 +83283,7 @@ function AnimatorDefender:rapb(track, aid, report, now)
 	hist[#hist + 1] = now
 	self._apGlobalHistory[#self._apGlobalHistory + 1] = now
 	self._apRecentIds[#self._apRecentIds + 1] = { time = now, aid = aid, category = category }
+	local prevKnown = self._apLastKnownTime
 	self._apLastKnownTime = now
 	apbPruneTimes(hist, now)
 	apbPruneTimes(self._apGlobalHistory, now)
@@ -83288,11 +83314,13 @@ function AnimatorDefender:rapb(track, aid, report, now)
 		end)
 		self.apMaid:add(info.stopConn)
 	end
+	-- Returned so a later re-evaluation of this same occurrence can exclude its own record.
+	return now, prevKnown
 end
-local function apbActiveSuspicious(map)
+local function apbActiveSuspicious(map, exclude)
 	local n = 0
-	for _, info in next, map do
-		if info.suspicious then
+	for track, info in next, map do
+		if track ~= exclude and info.suspicious then
 			n = n + 1
 		end
 	end
@@ -83300,7 +83328,10 @@ local function apbActiveSuspicious(map)
 end
 
 -- ---- Heuristic classifier (aapb) -- exact ----------------------------------
-function AnimatorDefender:aapb(track, timing, aid, now)
+-- startedAt: when this occurrence was first seen. selfAt/selfPrev: the timestamp this occurrence
+-- was recorded under in history (and the last-known time before it), so a re-evaluation doesn't
+-- count the occurrence against itself.
+function AnimatorDefender:aapb(track, timing, aid, now, startedAt, selfAt, selfPrev)
 	now = now or os.clock()
 	self:capb(now)
 
@@ -83326,6 +83357,14 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 
 	local ownership = bM(self.entity, timing, aid)
 	local category = BA(timing)
+	-- StoredAction/StoredToolName are server-replicated, so a matching stored mantra proves the
+	-- attacker really has it even when the loadout cache doesn't list the tool.
+	if isPlayer and ownership.status == "missing" and category == "mantra" then
+		local store = sM(self.entity, timing, aid)
+		if store.status == "match" then
+			ownership = { status = "confirmed", reason = store.reason, attack = ownership.attack }
+		end
+	end
 	local weaponCtx = CR(self.entity, timing, category, aid)
 	local mantraEther = nil
 	local Gr = false
@@ -83394,8 +83433,16 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 	local blendGap = false
 	local extremeSpeed = false
 
+	local age = startedAt and math.max(0, now - startedAt)
+		or ((tonumber(track.TimePosition) or 0) / math.max(math.abs(speed), 0.05))
+	local weightRamping = age < APB_WEIGHT_RAMP_GRACE
+	local expectedLen = (length > 0 and math.abs(speed) > 0.05) and length / math.abs(speed) or nil
+	local endedNaturally = not track.IsPlaying and expectedLen ~= nil and age >= expectedLen - 0.05
+
 	if animationShapeChecks then
-		if wt >= 1 and wc <= 0.01 then
+		if weightRamping then
+			-- still fading in: current weight says nothing yet
+		elseif wt >= 1 and wc <= 0.01 then
 			blendGap = true
 			t(2, "high-target-zero-current")
 		elseif wt >= 0.5 and wc <= 0.12 then
@@ -83430,7 +83477,7 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 			shortLen = true
 			t(2, "very-short-length")
 		end
-		if not track.IsPlaying then
+		if not track.IsPlaying and not endedNaturally then
 			shortLen = true
 			t(2, "not-playing")
 		end
@@ -83444,8 +83491,12 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 
 	local gap = nil
 	if burstChecks then
-		if self._apLastKnownTime then
-			gap = now - self._apLastKnownTime
+		local lastKnown = self._apLastKnownTime
+		if selfAt and lastKnown == selfAt then
+			lastKnown = selfPrev
+		end
+		if lastKnown then
+			gap = now - lastKnown
 			if gap < 0.05 then
 				bt = true
 				t(3, "tiny-gap")
@@ -83458,8 +83509,7 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 			end
 		end
 
-		local sameId = self._apHistory[aid]
-		local sameCount = (sameId and #sameId or 0) + 1
+		local sameCount = apbCountOthers(self._apHistory[aid], selfAt) + 1
 		if sameCount >= 5 then
 			t(3, "same-id-spam")
 		elseif sameCount >= 3 then
@@ -83467,7 +83517,7 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 		end
 	end
 
-	local globalCount = #self._apGlobalHistory + 1
+	local globalCount = apbCountOthers(self._apGlobalHistory, selfAt) + 1
 	local seenIds = { [aid] = true }
 	local seenCats = { [category] = true }
 	local uniqueIds, uniqueCats = 1, 1
@@ -83514,7 +83564,7 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 			q = true
 			t(1, "weapon-rotation-pressure")
 		end
-		activeSusp = apbActiveSuspicious(self._apActive)
+		activeSusp = apbActiveSuspicious(self._apActive, track)
 		if activeSusp >= 4 then
 			q = true
 			t(2, "active-suspicious-limit")
@@ -83545,6 +83595,10 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 	end
 
 	local hitPlausible = false
+	-- Corroboration for the "no hit yet" signals: an attacker who is simply still closing the distance
+	-- has no hit evidence at the play instant, so on its own that must not condemn a lone swing.
+	local coverActive = now - (self._apChurnAt or -math.huge) <= APB_CHURN_ACTIVE_WINDOW
+	local burstContext = q or bt or shortCount >= 1 or activeSusp >= 2 or coverActive
 	if hitPlausibilityChecks and not zo then
 		local geomOk, geomReason = self:apbh(timing)
 		if geomOk then
@@ -83552,16 +83606,16 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 			hitPlausible = true
 		elseif geomReason == "delay-until-hitbox" then
 			Tt = true
-		elseif isPlayer then
+		elseif isPlayer and burstContext then
 			t(3, "no-real-hit-evidence")
 			t(2, "known-timing-without-hit")
 		end
 	end
 
 	local realistic = not animationShapeChecks
-		or (not shapeSuspicious and track.IsPlaying and (weight <= 0 or weight >= 0.12)
+		or (not shapeSuspicious and (track.IsPlaying or endedNaturally) and (weight <= 0 or weight >= 0.12)
 			and (speed <= 0 or (speed >= 0.5 and speed <= 2.25)))
-	local notPlaying = animationShapeChecks and not track.IsPlaying
+	local notPlaying = animationShapeChecks and not track.IsPlaying and not endedNaturally
 	local ownedRealOrConfirmed = confirmedOwn or EA
 	local moduleCtx = timing.rpue or (timing.duih and (ownedRealOrConfirmed or not isPlayer)) or (timing.umoa and ownedRealOrConfirmed)
 	local n3 = moduleCtx and not q
@@ -83576,8 +83630,8 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 	local stackedBreaker = burstShape and not strongReal and not ownedRealOrConfirmed and not n3 and (Or or highSignals or tr >= 7)
 	local likelyReal = ownedRealistic and not stackedBreaker
 	local legitContext = anyReal and not stackedBreaker
-	local fakeHard = isPlayer and not legitContext and (Gr or j3 or extremeSpeed or (notPlaying and Or and (shapeSuspicious or breakerSignal)) or (NA and (shapeSuspicious or breakerSignal or not Tt)))
-	local fakeStacked = isPlayer and not legitContext and (stackedBreaker or (Or and highSignals and tr >= 7 and (shapeSuspicious or breakerSignal or not Tt or shortCount >= 3)))
+	local fakeHard = isPlayer and not legitContext and (Gr or j3 or extremeSpeed or (notPlaying and Or and (shapeSuspicious or breakerSignal)) or (NA and (shapeSuspicious or breakerSignal or (not Tt and burstContext))))
+	local fakeStacked = isPlayer and not legitContext and (stackedBreaker or (Or and highSignals and tr >= 7 and (shapeSuspicious or breakerSignal or (not Tt and burstContext) or shortCount >= 3)))
 
 	local tier = "Uncertain"
 	if not isPlayer then
@@ -83588,7 +83642,7 @@ function AnimatorDefender:aapb(track, timing, aid, now)
 		tier = "Likely Real"
 	elseif fakeHard then
 		tier = "Fake"
-	elseif fakeHard or fakeStacked then
+	elseif fakeStacked then
 		tier = "Likely Fake"
 	elseif legitContext then
 		tier = "Likely Real"
@@ -84612,7 +84666,8 @@ function AnimatorDefender:apProcess(track, occurrence, timing, recovered)
 	end
 
 	IngressGuard.advancedEntered()
-	local report = self:aapb(track, resolved, aid, os.clock())
+	local prior = self.apAuthenticator:getCandidate(track, occurrence)
+	local report = self:aapb(track, resolved, aid, os.clock(), startedAt, prior and prior.apSelfAt, prior and prior.apSelfPrev)
 	local view = self:apCandidateView(track, resolved, aid, report, startedAt)
 	view.occurrence = occurrence
 	local candidate, isNew, retried = self.apAuthenticator:observeCandidate(view)
@@ -84624,7 +84679,7 @@ function AnimatorDefender:apProcess(track, occurrence, timing, recovered)
 		end)
 	end
 	if isNew then
-		self:rapb(track, aid, report, startedAt)
+		candidate.apSelfAt, candidate.apSelfPrev = self:rapb(track, aid, report, startedAt)
 		candidate.historyRecorded = true
 		self:apQueueMantraEvidence(candidate, report)
 	end
@@ -84666,7 +84721,7 @@ function AnimatorDefender:apProcess(track, occurrence, timing, recovered)
 	end
 
 	if not candidate.historyRecorded then
-		self:rapb(track, aid, report, os.clock())
+		candidate.apSelfAt, candidate.apSelfPrev = self:rapb(track, aid, report, os.clock())
 		candidate.historyRecorded = true
 	end
 
@@ -84770,6 +84825,30 @@ AnimatorDefender.process = LPH_NO_VIRTUALIZE(function(self, track)
 	local advanced = players:GetPlayerFromCharacter(self.entity) ~= nil
 		and Configuration.expectToggleValue("AntiBreakerEnabled") == true
 	self:apArm(advanced)
+	if advanced and aid ~= "" and not SaveManager.as:index(aid) then
+		local churnNow = os.clock()
+		local churn = self._apChurn
+		if not churn or self._apChurnCount >= APB_CHURN_MAX_TRACKED then
+			churn = {}
+			self._apChurn = churn
+			self._apChurnCount = 0
+		end
+		local entry = churn[aid]
+		if not entry then
+			entry = { last = churnNow, streak = 1 }
+			churn[aid] = entry
+			self._apChurnCount = self._apChurnCount + 1
+		elseif churnNow - entry.last <= APB_CHURN_GAP then
+			entry.streak = entry.streak + 1
+			entry.last = churnNow
+		else
+			entry.streak = 1
+			entry.last = churnNow
+		end
+		if entry.streak >= APB_CHURN_STREAK then
+			self._apChurnAt = churnNow
+		end
+	end
 	if advanced then
 		local admitted, admittedTiming, admittedRecovered = self:rlimit(track)
 		if not admitted then
